@@ -6,9 +6,9 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
 import org.elasticmq.rest.sqs.{SQSRestServer, SQSRestServerBuilder}
 
-object SqsConnection {
+object SqsClientBuilder {
 
-  def build(): AmazonSQSAsync = {
+  def default(): AmazonSQSAsync = {
     AmazonSQSAsyncClientBuilder.defaultClient()
   }
 
@@ -20,7 +20,7 @@ object SqsConnection {
   }
 
   def inMemory(port: Int = 0): (SQSRestServer, AmazonSQSAsync) = {
-    val p = if (port == 0) getPort else port
+    val p = if (port == 0) getRandomPort else port
     val server = SQSRestServerBuilder.withPort(p).withInterface("localhost").start()
     val socket = server.waitUntilStarted().localAddress
     val endpoint = new EndpointConfiguration(s"http://${socket.getHostString}:${socket.getPort}", "elasticmq")
@@ -31,7 +31,7 @@ object SqsConnection {
     (server, conn)
   }
 
-  private def getPort = {
+  private def getRandomPort = {
     val s = new ServerSocket(0)
     val p = s.getLocalPort
     s.close()
