@@ -14,11 +14,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class SqsMessageSpec extends StreamSpec {
+class ConsumerSpec extends StreamSpec {
   "#autoAck" should "return the message with an Ack action" in {
     val msg = new Message()
     val probe = TestProbe()
-    Source.single(msg) via SqsMessage.ack runWith Sink.actorRef(probe.ref, "ok")
+    Source.single(msg) via Consumer.ack runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg((msg, Ack()))
   }
 
@@ -37,11 +37,11 @@ class SqsMessageSpec extends StreamSpec {
       import GraphDSL.Implicits._
 
       val in = Source(Seq(msgOk, msgEx))
-      val filter = b.add(SqsMessage.retryFilter(200))
+      val split = b.add(Consumer.maxRetriesSplit(200))
 
-      in ~> filter
-            filter.out(0) ~> sinkOk
-            filter.out(1) ~> sinkEx
+      in ~> split
+            split.out(0) ~> sinkOk
+            split.out(1) ~> sinkEx
 
       ClosedShape
     })
@@ -56,7 +56,7 @@ class SqsMessageSpec extends StreamSpec {
     val fn = (_: JsValue) => Future.successful("ok")
 
     val probe = TestProbe()
-    Source.single(msg) via SqsMessage.ackOrRetry(fn) runWith Sink.actorRef(probe.ref, "ok")
+    Source.single(msg) via Consumer.ackOrRetry(fn) runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg(Ack())
   }
 
@@ -65,7 +65,7 @@ class SqsMessageSpec extends StreamSpec {
     val fn = (_: JsValue) => Future.successful("ok")
 
     val probe = TestProbe()
-    Source.single(msg) via SqsMessage.ackOrRequeue(1.second)(fn) runWith Sink.actorRef(probe.ref, "ok")
+    Source.single(msg) via Consumer.ackOrRequeue(1.second)(fn) runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg(Ack())
   }
 
@@ -76,7 +76,7 @@ class SqsMessageSpec extends StreamSpec {
 
     val probe = TestProbe()
 
-    Source.single(msg) via SqsMessage.ackOrRequeue(delay)(fn) runWith Sink.actorRef(probe.ref, "ok")
+    Source.single(msg) via Consumer.ackOrRequeue(delay)(fn) runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg(RequeueWithDelay(1))
   }
 }
