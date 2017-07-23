@@ -20,7 +20,7 @@ class SerializerSpec extends StreamSpec {
   "#econde" should "return the string representation of the JsValue" in {
     val probe = TestProbe()
 
-    Source.single(jsonMsg) via Serializer.encode runWith Sink.actorRef(probe.ref, jsonMsg)
+    Source.single(jsonMsg) via Serializer.encode runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg(jsonMsg.toString())
   }
 
@@ -30,7 +30,7 @@ class SerializerSpec extends StreamSpec {
     val sqsMsg = new Message()
     sqsMsg.setBody(jsonMsg.toString())
 
-    Source.single(sqsMsg) via Serializer.decode runWith Sink.actorRef(probe.ref, jsonMsg)
+    Source.single(sqsMsg) via Serializer.decode runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg(jsonMsg)
   }
 }

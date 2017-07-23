@@ -7,17 +7,18 @@ import com.amazonaws.services.sqs.model.Message
 import play.api.libs.json.JsValue
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 object SqsMessage {
   
-  def autoAck = Flow[Message] map { message =>
+  def ack = Flow[Message] map { message =>
     (message, Ack())
   }
 
-  def retryConstraint(maxRetries: Int) = Partition[Message](2, message => {
+  def retryFilter(maxRetries: Int) = Partition[Message](2, message => {
     val count = message.getAttributes.asScala.get("ApproximateReceiveCount").map(_.toInt).getOrElse(1)
-    if (count > maxRetries) 1 else 0
+    if (count < maxRetries) 0 else 1
   })
 
   /**
@@ -35,10 +36,11 @@ object SqsMessage {
     * @param block
     * @return
     */
-  def ackOrRequeue[A](block: JsValue => Future[A])(implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
+  def ackOrRequeue[A](delay: Duration = 5.minutes)
+                     (block: JsValue => Future[A])(implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(10) { value =>
       block(value) map (_ => Ack()) recover {
-        case _: Throwable => RequeueWithDelay(5)
+        case _: Throwable => RequeueWithDelay(delay.toSeconds.toInt)
       }
     }
 
