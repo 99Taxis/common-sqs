@@ -15,14 +15,18 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ConsumerSpec extends StreamSpec {
-  "#autoAck" should "return the message with an Ack action" in {
+  "#apply" should "create a consumer graph flow" in {
+    // TODO
+  }
+
+  "#ack" should "return the message with an Ack action" in {
     val msg = new Message()
     val probe = TestProbe()
     Source.single(msg) via Consumer.ack runWith Sink.actorRef(probe.ref, "ok")
     probe.expectMsg((msg, Ack()))
   }
 
-  "#retryConstraint" should "output message to partition zero if ReceiveCount not exceed max retries and to one if does" in {
+  "#maxRetriesSplit" should "output message to partition zero if ReceiveCount not exceed max retries and to one if does" in {
     val msgOk = new Message()
     val msgEx = new Message()
     msgEx.setAttributes(Map("ApproximateReceiveCount" -> "350").asJava)
@@ -51,7 +55,7 @@ class ConsumerSpec extends StreamSpec {
     exceeded.expectMsg(msgEx)
   }
 
-  "#ackOrRetry(block)" should "return an Ack if future block succeeded" in {
+  "#ackOrRetry" should "return an Ack if future block succeeded" in {
     val msg = Json.obj()
     val fn = (_: JsValue) => Future.successful("ok")
 
@@ -60,7 +64,7 @@ class ConsumerSpec extends StreamSpec {
     probe.expectMsg(Ack())
   }
 
-  "#ackOrRequeue(delay)(block)" should "return an Ack if future block succeeded" in {
+  "#ackOrRequeue" should "return an Ack if future block succeeded" in {
     val msg = Json.obj()
     val fn = (_: JsValue) => Future.successful("ok")
 

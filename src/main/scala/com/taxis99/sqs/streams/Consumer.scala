@@ -1,15 +1,14 @@
 package com.taxis99.sqs.streams
 
 import akka.NotUsed
-import akka.stream.{FlowShape, Materializer}
+import akka.stream.FlowShape
 import akka.stream.alpakka.sqs.{Ack, MessageAction, RequeueWithDelay}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Partition, Zip}
 import com.amazonaws.services.sqs.model.Message
 import play.api.libs.json.JsValue
 
-import scala.concurrent.duration._
-import scala.concurrent.duration.Duration
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{ExecutionContext, Future}
 
 object Consumer {
@@ -17,12 +16,13 @@ object Consumer {
   val LEVEL_OF_PARALLELISM = 10
 
   /**
-    * Returns a complete consumer flow
-    * @param block
-    * @tparam A
-    * @return
+    * Returns a consumer flow graph.
+    * @param block The message execution block
+    * @return A flow graph stage
     */
-  def apply[A](delay: Duration)(block: JsValue => Future[A])(implicit ec: ExecutionContext) = {
+  def apply[A](delay: Duration)
+              (block: JsValue => Future[A])
+              (implicit ec: ExecutionContext): Flow[Message, (Message, MessageAction), NotUsed] = {
 
     Flow.fromGraph(GraphDSL.create() { implicit b =>
       import GraphDSL.Implicits._
@@ -67,7 +67,8 @@ object Consumer {
     * @param block The execution block
     * @return A flow stage that returns a MessageAction
     */
-  def ackOrRetry[A](block: JsValue => Future[A])(implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
+  def ackOrRetry[A](block: JsValue => Future[A])
+                   (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
       block(value) map (_ => Ack())
     }
@@ -79,7 +80,8 @@ object Consumer {
     * @return A flow stage that returns a MessageAction
     */
   def ackOrRequeue[A](delay: Duration = 5.minutes)
-                     (block: JsValue => Future[A])(implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
+                     (block: JsValue => Future[A])
+                     (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
       block(value) map (_ => Ack()) recover {
         case _: Throwable => RequeueWithDelay(delay.toSeconds.toInt)

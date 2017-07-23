@@ -4,9 +4,10 @@ import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSource}
+import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
+import akka.stream.scaladsl.Source
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.sqs.streams.Consumer
+import com.taxis99.sqs.streams.{Consumer, Producer}
 import com.typesafe.config.Config
 import play.api.libs.json.JsValue
 
@@ -27,6 +28,7 @@ class SqsClient @Inject()(config: Config)
     SqsSource("") via Consumer(retryDelay)(block) runWith SqsAckSink("")
   }
 
-  def producer(eventualQueueConfig: Future[SqsQueue]) = ???
+  def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) =>
+    Source.single(value) via Producer() runWith SqsSink("")
 
 }
