@@ -1,5 +1,7 @@
 package com.taxis99.sqs
 
+import akka.actor.ActorSystem
+import akka.testkit.TestKit
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import org.elasticmq.rest.sqs.SQSRestServerBuilder
 import test.BaseSpec
@@ -20,9 +22,11 @@ class SqsClientBuilderSpec extends BaseSpec {
   }
 
   "#inMemory" should "start an in memory ElasticMQ and return a AmazonSQSAsync connected to it" in {
-    val (server, conn) = SqsClientBuilder.inMemory()
+    val system = ActorSystem("inMemoryTest")
+    val (server, conn) = SqsClientBuilder.inMemory(system)
     val q = conn.createQueueAsync("foo").get()
     q.getQueueUrl should endWith ("/queue/foo")
     server.stopAndWait()
+    TestKit.shutdownActorSystem(system)
   }
 }

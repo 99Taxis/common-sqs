@@ -1,11 +1,17 @@
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestKit, TestKitBase}
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.taxis99.sqs.SqsClientBuilder
 import org.scalatest._
 import org.scalatest.concurrent.Futures
+import org.scalatest.time._
 
 package object test {
-  trait BaseSpec extends FlatSpec with Matchers with OptionValues with Futures with RecoverMethods
+  trait BaseSpec extends FlatSpec with Matchers with OptionValues with Futures with RecoverMethods {
+    implicit val defaultPatience =
+      PatienceConfig(timeout =  Span(3, Seconds), interval = Span(5, Millis))
+  }
 
   trait StreamSpec extends BaseSpec with TestKitBase with ImplicitSender with BeforeAndAfterAll {
     implicit lazy val system = ActorSystem("test")
@@ -16,6 +22,18 @@ package object test {
     val settings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
 
     implicit lazy val materializer = ActorMaterializer(settings)
+
+    def withInMemoryQ(testCode: (AmazonSQSAsync) => Any) {
+      val (server, aws) = SqsClientBuilder.inMemory(system)
+      server.waitUntilStarted()
+
+      val aws2 = SqsClientBuilder.atLocalhost()
+
+      try {
+        testCode(aws2) // "loan" the fixture to the test
+      }
+      finally server.stopAndWait()
+    }
 
     override def afterAll {
       TestKit.shutdownActorSystem(system)

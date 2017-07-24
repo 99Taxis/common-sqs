@@ -9,16 +9,22 @@ import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.sqs.streams.{Consumer, Producer}
+import com.taxis99.sqs.streams.{Consumer, Producer, Serializer}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 @Singleton
 class SqsClient @Inject()(config: Config)
                          (implicit actorSystem: ActorSystem, ec: ExecutionContext, sqs: AmazonSQSAsync) {
+
+  protected val logger: Logger =
+    Logger(LoggerFactory.getLogger(getClass.getName))
 
   implicit val materializer = ActorMaterializer()
 
@@ -30,8 +36,7 @@ class SqsClient @Inject()(config: Config)
   private def getQueue(queueConfigKey: String): Future[SqsQueue] = ???
   
   def consumer[A](eventualQueueConfig: Future[SqsQueue])
-                 (block: JsValue => Future[A]) = eventualQueueConfig map { q =>
-    println("Consuming")
+                 (block: JsValue => Future[A]) = eventualQueueConfig flatMap { q =>
     // Get configuration options
     val waitTimeSeconds = config.as[Option[Int]](s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
     val maxBufferSize = config.as[Option[Int]](s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
@@ -46,6 +51,6 @@ class SqsClient @Inject()(config: Config)
   }
 
   def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig flatMap { q =>
-    Source.single(value) via Producer() runWith SqsSink(q.url)
+    Source.single(value) via Serializer.encode runWith SqsSink(q.url)
   }
 }

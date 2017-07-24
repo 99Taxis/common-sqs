@@ -3,18 +3,22 @@ package com.taxis99.sqs.streams
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.alpakka.sqs.{Ack, MessageAction, RequeueWithDelay}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Partition, Sink, Source, Zip}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Zip}
 import com.amazonaws.services.sqs.model.Message
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 object Consumer {
 
-  val LEVEL_OF_PARALLELISM = 10
+  protected val LEVEL_OF_PARALLELISM = 10
+  
+  protected val logger: Logger =
+    Logger(LoggerFactory.getLogger(getClass.getName))
 
   /**
     * Returns a consumer flow graph.
