@@ -21,16 +21,16 @@ class SerializerSpec extends StreamSpec {
     val probe = TestProbe()
 
     Source.single(jsonMsg) via Serializer.encode runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg(jsonMsg.toString())
+    probe expectMsg Serializer.pack(jsonMsg)
   }
 
   "#decode" should "return the JsValue from a Amazon SQS message" in {
     val probe = TestProbe()
     
     val sqsMsg = new Message()
-    sqsMsg.setBody(jsonMsg.toString())
+    sqsMsg.setBody(Serializer.pack(jsonMsg))
 
     Source.single(sqsMsg) via Serializer.decode runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg(jsonMsg)
+    probe expectMsg jsonMsg
   }
 }

@@ -46,7 +46,7 @@ class SqsClient @Inject()(config: Config)
     // Configure source to send all attributes from the message
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
       attributeNames = Seq(All), messageAttributeNames = Seq(MessageAttributeName("All")))
-
+    
     SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero)(block) runWith SqsAckSink(q.url)
   }
 

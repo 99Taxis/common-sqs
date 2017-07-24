@@ -1,25 +1,25 @@
 package com.taxis99.sqs.streams
 
 import akka.pattern.pipe
-import akka.stream.ClosedShape
 import akka.stream.alpakka.sqs.{Ack, RequeueWithDelay}
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.model.Message
-import org.scalatest.RecoverMethods
 import play.api.libs.json.{JsValue, Json}
 import test.StreamSpec
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ConsumerSpec extends StreamSpec {
+  val msg = Json.obj("foo" -> "bar")
+  val packedMsg = Serializer.pack(msg)
+
   "#apply" should "send an Ack and delete the message from queue if the block fn succeeds" in {
     val msg = new Message()
-    msg.setBody("{}")
+    msg.setBody(packedMsg)
 
     val fn = (_: JsValue) => Future.successful("ok")
     val probe = TestProbe()
@@ -30,7 +30,7 @@ class ConsumerSpec extends StreamSpec {
 
   it should "not delete message from queue if the block fn fails" in {
     val msg = new Message()
-    msg.setBody("{}")
+    msg.setBody(packedMsg)
 
     val fn = (_: JsValue) => Future.failed(new Exception("nok"))
     val probe = TestProbe()
@@ -65,7 +65,7 @@ class ConsumerSpec extends StreamSpec {
 
   it should "send an Ack and delete the message from queue if the block fn succeeds with requeue activated" in {
     val msg = new Message()
-    msg.setBody("{}")
+    msg.setBody(packedMsg)
 
     val fn = (_: JsValue) => Future.successful("ok")
     val probe = TestProbe()
@@ -76,7 +76,7 @@ class ConsumerSpec extends StreamSpec {
 
   it should "requeue the message with the given delay if block fn fails" in {
     val msg = new Message()
-    msg.setBody("""{"foo":"bar"}""")
+    msg.setBody(packedMsg)
 
     val fn = (_: JsValue) => Future.failed(new Exception("nok"))
     val probe = TestProbe()

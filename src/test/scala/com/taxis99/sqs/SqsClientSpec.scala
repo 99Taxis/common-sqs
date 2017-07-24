@@ -1,6 +1,7 @@
 package com.taxis99.sqs
 
 import akka.testkit.TestProbe
+import com.taxis99.sqs.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.BeforeAndAfter
 import play.api.libs.json.Json
@@ -22,15 +23,16 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
     val qUrl = aws.createQueueAsync("consumer-q-TEST").get().getQueueUrl
     val sqsQ = SqsQueue("consumer-q", "consumer-q-TEST", qUrl)
 
-    val msg = Json.obj("foo" -> "bar")
+    val unpackedMsg = Json.obj("foo" -> "bar")
+    val packedMsg = Serializer.pack(unpackedMsg)
     val probe = TestProbe()
-    aws.sendMessageAsync(qUrl, msg.toString()).get()
+    aws.sendMessageAsync(qUrl, packedMsg).get()
 
     sqs.consumer(Future.successful(sqsQ)) { value =>
       Future.successful(probe.ref ! value)
     }
 
-    probe expectMsg msg
+    probe expectMsg unpackedMsg
   }
   
   "#producer" should "produce message to the queue" in withInMemoryQ { implicit aws =>
