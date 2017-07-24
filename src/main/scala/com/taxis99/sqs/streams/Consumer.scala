@@ -47,7 +47,6 @@ object Consumer {
       filter ~> bcast
       bcast.out(0) ~>                                      merge.in0
       bcast.out(1) ~> Serializer.decode ~> failStrategy ~> merge.in1
-                                                           merge.out
 
       FlowShape(filter.in, merge.out)
     })

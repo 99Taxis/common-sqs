@@ -43,6 +43,8 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
     val msg = Json.obj("foo" -> "bar")
     produce(msg)
 
+//    aws.sendMessageAsync(qUrl, msg.toString()).get()
+
     val eventualMsgs: Future[Seq[String]] = Future {
       aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
     }

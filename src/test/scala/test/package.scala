@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestKit, TestKitBase}
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.sqs.SqsClientBuilder
+import com.taxis99.sqs.SqsClientFactory
 import org.scalatest._
 import org.scalatest.concurrent.Futures
 import org.scalatest.time._
@@ -24,15 +24,10 @@ package object test {
     implicit lazy val materializer = ActorMaterializer(settings)
 
     def withInMemoryQ(testCode: (AmazonSQSAsync) => Any) {
-      val (server, aws) = SqsClientBuilder.inMemory(system)
-      server.waitUntilStarted()
+//      val (_, aws) = SqsClientFactory.inMemory(system)
+      val local = SqsClientFactory.atLocalhost()
 
-      val aws2 = SqsClientBuilder.atLocalhost()
-
-      try {
-        testCode(aws2) // "loan" the fixture to the test
-      }
-      finally server.stopAndWait()
+      testCode(local) // "loan" the fixture to the test
     }
 
     override def afterAll {
