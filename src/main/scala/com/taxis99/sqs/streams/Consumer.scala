@@ -3,7 +3,7 @@ package com.taxis99.sqs.streams
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.alpakka.sqs.{Ack, MessageAction, RequeueWithDelay}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Partition, Sink, Zip}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Partition, Sink, Source, Zip}
 import com.amazonaws.services.sqs.model.Message
 import play.api.libs.json.JsValue
 
@@ -21,7 +21,7 @@ object Consumer {
     * @param block The message execution block
     * @return A flow graph stage
     */
-  def apply[A](delay: Duration)
+  def apply[A](delay: Duration, maxRetries: Int = 200)
               (block: JsValue => Future[A])
               (implicit ec: ExecutionContext): Flow[Message, (Message, MessageAction), NotUsed] = {
 
@@ -35,19 +35,17 @@ object Consumer {
     Flow.fromGraph(GraphDSL.create() { implicit b =>
       import GraphDSL.Implicits._
 
-//      val split = b.add(Consumer.maxRetriesSplit(200))
+      val filter = b.add(Flow[Message] filterNot maxRetriesReached(maxRetries))
       val bcast = b.add(Broadcast[Message](2))
       val merge = b.add(Zip[Message, MessageAction])
-//      val output = b.add(Merge[(Message, MessageAction)](2, eagerComplete = true))
-      // Max retries not reached
-//      split.out(0) ~> bcast
-                      bcast.out(0) ~>                                      merge.in0
-                      bcast.out(1) ~> Serializer.decode ~> failStrategy ~> merge.in1
-//                                                                           merge.out ~> output
-//      // Max retries exceeded
-//      split.out(1) ~> Consumer.ack ~>                                                   output
 
-      FlowShape(bcast.in, merge.out)
+      // Max retries not reached
+      filter ~> bcast
+      bcast.out(0) ~>                                      merge.in0
+      bcast.out(1) ~> Serializer.decode ~> failStrategy ~> merge.in1
+                                                           merge.out
+
+      FlowShape(filter.in, merge.out)
     })
   }
 
@@ -56,10 +54,10 @@ object Consumer {
     * @param maxRetries The amount of times that this message is allowed to retry
     * @return A message Partition stage
     */
-  def maxRetriesSplit(maxRetries: Int) = Partition[Message](2, message => {
+  private def maxRetriesReached(maxRetries: Int)(message: Message): Boolean = {
     val count = message.getAttributes.asScala.get("ApproximateReceiveCount").map(_.toInt).getOrElse(1)
-    if (count < maxRetries) 0 else 1
-  })
+    if (count < maxRetries) false else true
+  }
 
   /**
     * Assign an Ack to the given message, allowing to be piped to the SqsAckSink.
