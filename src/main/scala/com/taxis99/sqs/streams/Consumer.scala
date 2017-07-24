@@ -63,7 +63,7 @@ object Consumer {
     * Assign an Ack to the given message, allowing to be piped to the SqsAckSink.
     * @return A flow stage that responds the message with an Ack action
     */
-  def ack = Flow[Message] map { message =>
+  private def ack = Flow[Message] map { message =>
     (message, Ack())
   }
 
@@ -73,7 +73,7 @@ object Consumer {
     * @param block The execution block
     * @return A flow stage that returns a MessageAction
     */
-  def ackOrRetry[A](block: JsValue => Future[A])
+  private def ackOrRetry[A](block: JsValue => Future[A])
                    (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
       block(value) map (_ => Ack())
@@ -85,7 +85,7 @@ object Consumer {
     * @param block The execution block
     * @return A flow stage that returns a MessageAction
     */
-  def ackOrRequeue[A](delay: Duration = 5.minutes)
+  private def ackOrRequeue[A](delay: Duration = 5.minutes)
                      (block: JsValue => Future[A])
                      (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>

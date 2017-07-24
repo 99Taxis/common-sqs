@@ -84,40 +84,4 @@ class ConsumerSpec extends StreamSpec {
     Source.single(msg) via Consumer(Duration.Zero, 350)(fn) runWith Sink.headOption pipeTo probe.ref
     probe expectMsg None
   }
-
-  "#ack" should "return the message with an Ack action" in {
-    val msg = new Message()
-    val probe = TestProbe()
-    Source.single(msg) via Consumer.ack runWith Sink.head pipeTo probe.ref
-    probe expectMsg ((msg, Ack()))
-  }
-
-  "#ackOrRetry" should "return an Ack if future block succeeded" in {
-    val msg = Json.obj()
-    val fn = (_: JsValue) => Future.successful("ok")
-
-    val probe = TestProbe()
-    Source.single(msg) via Consumer.ackOrRetry(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe expectMsg Ack()
-  }
-
-  "#ackOrRequeue" should "return an Ack if future block succeeded" in {
-    val msg = Json.obj()
-    val fn = (_: JsValue) => Future.successful("ok")
-
-    val probe = TestProbe()
-    Source.single(msg) via Consumer.ackOrRequeue(1.second)(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe expectMsg Ack()
-  }
-
-  it should "return an RequeueWithDelay if future block fails" in {
-    val delay = 1.second
-    val msg = Json.obj()
-    val fn = (_: JsValue) => Future.failed(new Exception("nok"))
-
-    val probe = TestProbe()
-
-    Source.single(msg) via Consumer.ackOrRequeue(delay)(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe expectMsg RequeueWithDelay(1)
-  }
 }
