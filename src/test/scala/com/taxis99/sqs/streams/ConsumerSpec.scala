@@ -1,10 +1,12 @@
 package com.taxis99.sqs.streams
 
+import akka.pattern.pipe
 import akka.stream.ClosedShape
 import akka.stream.alpakka.sqs.{Ack, RequeueWithDelay}
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.model.Message
+import org.scalatest.RecoverMethods
 import play.api.libs.json.{JsValue, Json}
 import test.StreamSpec
 
@@ -15,15 +17,68 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ConsumerSpec extends StreamSpec {
-  "#apply" should "create a consumer graph flow" in {
-    // TODO
+  "#apply" should "send an Ack and delete the message from queue if the block fn succeeds" in {
+    val msg = new Message()
+    msg.setBody("{}")
+
+    val fn = (_: JsValue) => Future.successful("ok")
+    val probe = TestProbe()
+
+    Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.head pipeTo probe.ref
+    probe expectMsg ((msg, Ack()))
+  }
+
+  it should "not delete message from queue if the block fn fails" in {
+    val msg = new Message()
+    msg.setBody("{}")
+
+    val fn = (_: JsValue) => Future.failed(new Exception("nok"))
+    val probe = TestProbe()
+
+    recoverToSucceededIf[Exception] {
+      Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.headOption pipeTo probe.ref
+    }
+  }
+
+  it should "not delete message from queue if the deserialization fails" in {
+    val msg = new Message()
+    msg.setBody("{not a valid JSON}")
+
+    val fn = (_: JsValue) => Future.failed(new Exception("nok"))
+    val probe = TestProbe()
+
+    recoverToSucceededIf[Exception] {
+      Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.headOption pipeTo probe.ref
+    }
+  }
+
+  it should "send an Ack and delete the message from queue if the block fn succeeds with requeue activated" in {
+    val msg = new Message()
+    msg.setBody("{}")
+
+    val fn = (_: JsValue) => Future.successful("ok")
+    val probe = TestProbe()
+    
+    Source.single(msg) via Consumer(1.minute)(fn) runWith Sink.head pipeTo probe.ref
+    probe expectMsg ((msg, Ack()))
+  }
+
+  it should "requeue the message with the given delay if block fn fails" in {
+    val msg = new Message()
+    msg.setBody("""{"foo":"bar"}""")
+
+    val fn = (_: JsValue) => Future.failed(new Exception("nok"))
+    val probe = TestProbe()
+
+    Source.single(msg) via Consumer(1.minute)(fn) runWith Sink.head pipeTo probe.ref
+    probe expectMsg ((msg, RequeueWithDelay(60)))
   }
 
   "#ack" should "return the message with an Ack action" in {
     val msg = new Message()
     val probe = TestProbe()
-    Source.single(msg) via Consumer.ack runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg((msg, Ack()))
+    Source.single(msg) via Consumer.ack runWith Sink.head pipeTo probe.ref
+    probe expectMsg ((msg, Ack()))
   }
 
   "#maxRetriesSplit" should "output message to partition zero if ReceiveCount not exceed max retries and to one if does" in {
@@ -51,8 +106,8 @@ class ConsumerSpec extends StreamSpec {
     })
 
     graph.run()
-    ok.expectMsg(msgOk)
-    exceeded.expectMsg(msgEx)
+    ok expectMsg msgOk
+    exceeded expectMsg msgEx
   }
 
   "#ackOrRetry" should "return an Ack if future block succeeded" in {
@@ -61,7 +116,7 @@ class ConsumerSpec extends StreamSpec {
 
     val probe = TestProbe()
     Source.single(msg) via Consumer.ackOrRetry(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg(Ack())
+    probe expectMsg Ack()
   }
 
   "#ackOrRequeue" should "return an Ack if future block succeeded" in {
@@ -70,7 +125,7 @@ class ConsumerSpec extends StreamSpec {
 
     val probe = TestProbe()
     Source.single(msg) via Consumer.ackOrRequeue(1.second)(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg(Ack())
+    probe expectMsg Ack()
   }
 
   it should "return an RequeueWithDelay if future block fails" in {
@@ -81,6 +136,6 @@ class ConsumerSpec extends StreamSpec {
     val probe = TestProbe()
 
     Source.single(msg) via Consumer.ackOrRequeue(delay)(fn) runWith Sink.actorRef(probe.ref, "ok")
-    probe.expectMsg(RequeueWithDelay(1))
+    probe expectMsg RequeueWithDelay(1)
   }
 }
