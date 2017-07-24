@@ -21,6 +21,7 @@ lazy val root = (project in file(".")).
       "com.lightbend.akka" %% "akka-stream-alpakka-sqs" % "0.10",
       "com.github.xuwei-k" %% "msgpack4z-play"          % "0.5.1",
       "org.elasticmq"      %% "elasticmq-server"        % "0.13.8",
+      "com.iheart"         %% "ficus"                   % "1.4.1",
       "com.typesafe.akka"  %% "akka-testkit"            % akkaVersion % Test,
       scalaTest % Test
     ),

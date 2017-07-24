@@ -1,3 +1,11 @@
 package com.taxis99.sqs
 
-case class SqsQueue(configKey: String)
+import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
+
+case class SqsQueue(key: String, name: String, url: String) {
+
+
+
+
+
+}

@@ -52,6 +52,17 @@ class ConsumerSpec extends StreamSpec {
     }
   }
 
+  it should "discard a message if it achieved max retries limit" in {
+    val msg = new Message()
+    msg.setAttributes(Map("ApproximateReceiveCount" -> "350").asJava)
+
+    val fn = (_: JsValue) => Future.successful("ok")
+    val probe = TestProbe()
+
+    Source.single(msg) via Consumer(Duration.Zero, 350)(fn) runWith Sink.headOption pipeTo probe.ref
+    probe expectMsg None
+  }
+
   it should "send an Ack and delete the message from queue if the block fn succeeds with requeue activated" in {
     val msg = new Message()
     msg.setBody("{}")
@@ -72,16 +83,5 @@ class ConsumerSpec extends StreamSpec {
 
     Source.single(msg) via Consumer(1.minute)(fn) runWith Sink.head pipeTo probe.ref
     probe expectMsg ((msg, RequeueWithDelay(60)))
-  }
-
-  it should "discard a message if it achieved max retries limit" in {
-    val msg = new Message()
-    msg.setAttributes(Map("ApproximateReceiveCount" -> "350").asJava)
-
-    val fn = (_: JsValue) => Future.successful("ok")
-    val probe = TestProbe()
-
-    Source.single(msg) via Consumer(Duration.Zero, 350)(fn) runWith Sink.headOption pipeTo probe.ref
-    probe expectMsg None
   }
 }
