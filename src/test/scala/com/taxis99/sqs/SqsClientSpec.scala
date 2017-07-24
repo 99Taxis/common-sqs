@@ -2,26 +2,38 @@ package com.taxis99.sqs
 
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.amazonaws.services.sqs.model.{AmazonSQSException, CreateQueueRequest}
 import com.taxis99.sqs.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.BeforeAndAfter
+import org.scalatest.concurrent.ScalaFutures._
 import play.api.libs.json.Json
 import test.StreamSpec
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class SqsClientSpec extends StreamSpec with BeforeAndAfter {
-
-  val sqsConfig = Map("test-q" -> "test-q-DEV")
   val config = ConfigFactory.empty()
-    .withValue("sqs", ConfigValueFactory.fromMap(sqsConfig.asJava))
 
   def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {
     aws.createQueueAsync(queueName).get().getQueueUrl
+  }
+
+  "#getQueue" should "" in withInMemoryQ { implicit aws =>
+    val (configKey, configName) = ("test-q", "test-q-DEV")
+    createQueue("test-q-DEV")
+    val sqs = new SqsClient(config
+      .withValue("sqs", ConfigValueFactory.fromMap(Map(
+        configKey -> configName
+      ).asJava)))
+    val q = sqs.getQueue(configKey)
+
+    whenReady(q) { case SqsQueue(key, name, url) =>
+        key shouldBe configKey
+        name shouldBe configName
+        url should endWith (s"/queue/$configName")
+    }
   }
 
   "#consumer" should "consume messages from the queue" in withInMemoryQ { implicit aws =>
@@ -58,7 +70,8 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
       aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
     }
 
-    val msgs: Seq[String] = Await.result(eventualMsgs, 3.seconds)
-    msgs should contain (Serializer.pack(msg)) 
+    whenReady(eventualMsgs) { msgs =>
+      msgs should contain (Serializer.pack(msg))
+    }
   }
 }

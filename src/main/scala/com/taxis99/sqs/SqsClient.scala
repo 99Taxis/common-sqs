@@ -2,22 +2,21 @@ package com.taxis99.sqs
 
 import javax.inject._
 
-import net.ceedubs.ficus.Ficus._
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
+import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.sqs.streams.{Consumer, Producer, Serializer}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
+import net.ceedubs.ficus.Ficus._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 @Singleton
 class SqsClient @Inject()(config: Config)
@@ -33,7 +32,11 @@ class SqsClient @Inject()(config: Config)
   private val defaultMaxBatchSize = config.as[Option[Int]]("sqs.settings.default.maxBatchSize").getOrElse(10)
   private val defaultMaxRetries = config.as[Option[Int]]("sqs.settings.default.maxRetries").getOrElse(200)
 
-  private def getQueue(queueConfigKey: String): Future[SqsQueue] = ???
+  def getQueue(queueKey: String): Future[SqsQueue] = Future {
+    val queueName = config.getString(s"sqs.$queueKey")
+    val queueUrl = sqs.getQueueUrlAsync(queueName).get().getQueueUrl
+    SqsQueue(queueKey, queueName, queueUrl)
+  }
   
   def consumer[A](eventualQueueConfig: Future[SqsQueue])
                  (block: JsValue => Future[A]) = eventualQueueConfig flatMap { q =>
@@ -51,6 +54,6 @@ class SqsClient @Inject()(config: Config)
   }
 
   def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig flatMap { q =>
-    Source.single(value) via Serializer.encode runWith SqsSink(q.url)
+    Source.single(value) via Producer() runWith SqsSink(q.url)
   }
 }

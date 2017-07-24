@@ -4,11 +4,11 @@ import akka.testkit.{ImplicitSender, TestKit, TestKitBase}
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.sqs.SqsClientFactory
 import org.scalatest._
-import org.scalatest.concurrent.Futures
+import org.scalatest.concurrent.{Futures, PatienceConfiguration}
 import org.scalatest.time._
 
 package object test {
-  trait BaseSpec extends FlatSpec with Matchers with OptionValues with Futures with RecoverMethods {
+  trait BaseSpec extends FlatSpec with Matchers with OptionValues with PatienceConfiguration with RecoverMethods {
     implicit val defaultPatience =
       PatienceConfig(timeout =  Span(3, Seconds), interval = Span(5, Millis))
   }
