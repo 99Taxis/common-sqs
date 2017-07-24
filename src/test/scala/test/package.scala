@@ -24,10 +24,8 @@ package object test {
     implicit lazy val materializer = ActorMaterializer(settings)
 
     def withInMemoryQ(testCode: (AmazonSQSAsync) => Any) {
-//      val (_, aws) = SqsClientFactory.inMemory(system)
-      val local = SqsClientFactory.atLocalhost()
-
-      testCode(local) // "loan" the fixture to the test
+      val (_, aws) = SqsClientFactory.inMemory(system)
+      testCode(aws) // "loan" the fixture to the test
     }
 
     override def afterAll {

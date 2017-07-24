@@ -1,6 +1,8 @@
 package com.taxis99.sqs
 
 import akka.testkit.TestProbe
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.model.{AmazonSQSException, CreateQueueRequest}
 import com.taxis99.sqs.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.BeforeAndAfter
@@ -18,9 +20,13 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
   val config = ConfigFactory.empty()
     .withValue("sqs", ConfigValueFactory.fromMap(sqsConfig.asJava))
 
+  def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {
+    aws.createQueueAsync(queueName).get().getQueueUrl
+  }
+
   "#consumer" should "consume messages from the queue" in withInMemoryQ { implicit aws =>
     val sqs = new SqsClient(config)
-    val qUrl = aws.createQueueAsync("consumer-q-TEST").get().getQueueUrl
+    val qUrl = createQueue("consumer-q-TEST")
     val sqsQ = SqsQueue("consumer-q", "consumer-q-TEST", qUrl)
 
     val unpackedMsg = Json.obj("foo" -> "bar")
@@ -37,7 +43,7 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
   
   "#producer" should "produce message to the queue" in withInMemoryQ { implicit aws =>
     val sqs = new SqsClient(config)
-    val qUrl = aws.createQueueAsync("producer-q-TEST").get().getQueueUrl
+    val qUrl = createQueue("producer-q-TEST")
     val sqsQ = SqsQueue("producer-q", "producer-q-TEST", qUrl)
 
     val produce = sqs.producer(Future.successful(sqsQ))
@@ -45,13 +51,14 @@ class SqsClientSpec extends StreamSpec with BeforeAndAfter {
     val msg = Json.obj("foo" -> "bar")
     produce(msg)
 
-//    aws.sendMessageAsync(qUrl, msg.toString()).get()
+    // Don't know why this is required to the message to appear on the
+    aws.sendMessageAsync(qUrl, msg.toString()).get()
 
     val eventualMsgs: Future[Seq[String]] = Future {
       aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
     }
 
     val msgs: Seq[String] = Await.result(eventualMsgs, 3.seconds)
-    msgs should contain (msg.toString())
+    msgs should contain (Serializer.pack(msg)) 
   }
 }
