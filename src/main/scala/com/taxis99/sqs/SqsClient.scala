@@ -31,6 +31,7 @@ class SqsClient @Inject()(config: Config)
   
   def consumer[A](eventualQueueConfig: Future[SqsQueue])
                  (block: JsValue => Future[A]) = eventualQueueConfig map { q =>
+    println("Consuming")
     // Get configuration options
     val waitTimeSeconds = config.as[Option[Int]](s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
     val maxBufferSize = config.as[Option[Int]](s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
@@ -44,7 +45,7 @@ class SqsClient @Inject()(config: Config)
     SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero)(block) runWith SqsAckSink(q.url)
   }
 
-  def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig map { q =>
+  def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig flatMap { q =>
     Source.single(value) via Producer() runWith SqsSink(q.url)
   }
 }
