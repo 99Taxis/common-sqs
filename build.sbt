@@ -21,7 +21,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.play"  %% "play-json"               % "2.6.2"  % Provided,
       "com.typesafe.akka"  %% "akka-stream"             % akkaVersion,
       "com.typesafe.akka"  %% "akka-stream-testkit"     % akkaVersion,
-      "com.lightbend.akka" %% "akka-stream-alpakka-sns" % "0.10",
+      "com.lightbend.akka" %% "akka-stream-alpakka-sns" % "0.11",
       "com.lightbend.akka" %% "akka-stream-alpakka-sqs" % "0.10",
       "com.github.xuwei-k" %% "msgpack4z-core"          % "0.3.7",
       "com.github.xuwei-k" %% "msgpack4z-play"          % "0.5.1",

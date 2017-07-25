@@ -1,4 +1,4 @@
-package com.taxis99.sqs.streams
+package com.taxis99.streams
 
 import akka.NotUsed
 import akka.stream.FlowShape

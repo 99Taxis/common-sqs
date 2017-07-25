@@ -7,10 +7,16 @@ import org.elasticmq.rest.sqs.{SQSLimits, SQSRestServer, SQSRestServerBuilder}
 
 object SqsClientFactory {
 
+  /**
+    * Returns a default Amazons SQS client.
+    */
   def default(): AmazonSQSAsync = {
     AmazonSQSAsyncClientBuilder.defaultClient()
   }
 
+  /**
+    * Returns a Amazons SQS client connected to an endpoint at localhost.
+    */
   def atLocalhost(port: Int = 9324): AmazonSQSAsync = {
     val endpoint = new EndpointConfiguration(s"http://localhost:$port", "elasticmq")
     AmazonSQSAsyncClientBuilder.standard()

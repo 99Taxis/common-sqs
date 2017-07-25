@@ -1,4 +1,4 @@
-package com.taxis99.sqs.streams
+package com.taxis99.streams
 
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe

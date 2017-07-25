@@ -2,7 +2,7 @@ package com.taxis99.sqs
 
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.sqs.streams.Serializer
+import com.taxis99.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.concurrent.ScalaFutures._
 import play.api.libs.json.Json

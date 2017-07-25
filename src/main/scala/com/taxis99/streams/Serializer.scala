@@ -1,9 +1,9 @@
-package com.taxis99.sqs.streams
+package com.taxis99.streams
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.amazonaws.services.sqs.model.Message
-import com.taxis99.sqs.streams.Consumer.getClass
+import com.taxis99.streams.Consumer.getClass
 import com.typesafe.scalalogging.Logger
 import msgpack4z._
 import org.slf4j.LoggerFactory

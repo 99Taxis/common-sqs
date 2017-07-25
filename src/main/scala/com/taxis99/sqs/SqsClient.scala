@@ -8,7 +8,7 @@ import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
 import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.sqs.streams.{Consumer, Producer}
+import com.taxis99.streams.{Consumer, Producer}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import net.ceedubs.ficus.Ficus._
@@ -17,16 +17,13 @@ import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.Failure
 
 @Singleton
 class SqsClient @Inject()(config: Config)
                          (implicit actorSystem: ActorSystem, ec: ExecutionContext, sqs: AmazonSQSAsync) {
 
-  protected val logger: Logger =
-    Logger(LoggerFactory.getLogger(getClass.getName))
-
-  logger.info("SqsClient ready")
+  protected val logger: Logger = Logger(LoggerFactory.getLogger(getClass.getName))
 
   implicit val materializer = ActorMaterializer()
 
@@ -34,6 +31,8 @@ class SqsClient @Inject()(config: Config)
   private val defaultMaxBufferSize = config.as[Option[Int]]("sqs.settings.default.maxBufferSize").getOrElse(100)
   private val defaultMaxBatchSize = config.as[Option[Int]]("sqs.settings.default.maxBatchSize").getOrElse(10)
   private val defaultMaxRetries = config.as[Option[Int]]("sqs.settings.default.maxRetries").getOrElse(200)
+
+  logger.info("SQS Client ready")
 
   def getQueue(queueKey: String): Future[SqsQueue] = Future {
     val queueName = config.getString(s"sqs.$queueKey")
