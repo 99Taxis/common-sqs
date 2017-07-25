@@ -87,22 +87,27 @@ One just need to create an `AmazonSQSClientAsync` or use `SqsClientFactory` to d
 
 ```scala
 import com.google.inject.{AbstractModule, Provides}
+import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.typesafe.config.Config
 import com.taxis99.amazon.sqs.SqsClientFactory
+import play.api.{Configuration, Environment}
+import play.api.Mode.Prod
 import consumers.MyConsumer
 import producers.MyProducer
 
 class Module extends AbstractModule {
 
   @Provides
-  def amazonSqsClient(env: Environment): AmazonSQSAsyncClient = {
+  def amazonSqsClient(env: Environment): AmazonSQSAsync = {
     if (env.mode == Prod) {
       SqsClientFactory.default()
     } else {
-      SqsClientFactory.inMemory()
-      // If you have an ElasticMQ instance running in your machine 
-      // SqsClientFactory.atLocalhost()
+      SqsClientFactory.atLocalhost()
     }
   }
+  
+  @Provides
+  def config(config: Configuration): Config = config.underlying
   
   def configure = {
     bind(classOf[MyConsumer]).asEagerSingleton()
