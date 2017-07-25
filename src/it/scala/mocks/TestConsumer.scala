@@ -7,8 +7,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TestConsumer(queueName: String, probe: ActorRef)
                   (implicit val ec: ExecutionContext, val sqs: SqsClient) extends SqsConsumer[TestType] {
-  import TestType._
-
   def name = queueName
 
   def consume(message: TestType): Future[Unit] = Future {
