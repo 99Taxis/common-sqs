@@ -32,5 +32,5 @@ trait SqsConsumer[T] extends SqsConfig {
     * Starts to receive message into the consume function.
     * @return A future completed when the consumer stopped
     */
-  def startConsumer()(implicit fjs: Reads[T]) = sqs.consumer(queueUrl)(onPull(_) flatMap consume)
+  def startConsumer()(implicit fjs: Reads[T]) = sqs.consumer(queueConfig)(onPull(_) flatMap consume)
 }

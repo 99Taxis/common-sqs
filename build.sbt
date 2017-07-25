@@ -14,6 +14,7 @@ lazy val root = (project in file(".")).
       version      := "1.0.0-SNAPSHOT"
     )),
     name := "common-sqs",
+    crossScalaVersions := Seq("2.10.0", "2.11.0", "2.12.0"),
     libraryDependencies ++= Seq(
       "javax.inject"       % "javax.inject"             % "1",
       "com.amazonaws"      % "aws-java-sdk-sqs"         % "1.11.140",

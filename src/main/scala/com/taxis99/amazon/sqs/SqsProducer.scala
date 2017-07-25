@@ -13,6 +13,6 @@ trait SqsProducer[T] extends SqsConfig {
     * @return A future completed when the message was sent
     */
   def produce(message: T)(implicit tjs: Writes[T]): Future[Done] = {
-    sqs.producer(queueUrl)(Json.toJson(message))
+    sqs.producer(queueConfig)(Json.toJson(message))
   }
 }
