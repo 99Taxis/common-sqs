@@ -1,4 +1,4 @@
-package com.taxis99.sqs
+package com.taxis99.amazon.sqs
 
 import javax.inject._
 
@@ -8,7 +8,7 @@ import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
 import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.streams.{Consumer, Producer}
+import com.taxis99.amazon.streams.{Consumer, Producer}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import net.ceedubs.ficus.Ficus._

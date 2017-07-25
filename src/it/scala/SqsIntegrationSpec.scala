@@ -1,7 +1,7 @@
-package com.taxis99.sqs
+package com.taxis99.amazon.sqs
 
 import akka.testkit.TestProbe
-import com.taxis99.streams.Serializer
+import com.taxis99.amazon.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import it.BaseSpec
 import mocks.{TestConsumer, TestProducer, TestType}

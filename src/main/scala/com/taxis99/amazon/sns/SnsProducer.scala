@@ -1,6 +1,6 @@
-package com.taxis99.sns
+package com.taxis99.amazon.sns
 
-import com.taxis99.sqs.{SqsClient, SqsQueue}
+import com.taxis99.amazon.sqs.{SqsClient, SqsQueue}
 
 import scala.concurrent.{ExecutionContext, Future}
 

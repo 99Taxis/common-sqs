@@ -3,7 +3,7 @@ import java.util.concurrent.Executors
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{TestKit, TestKitBase}
-import com.taxis99.sqs.SqsClientFactory
+import com.taxis99.amazon.sqs.SqsClientFactory
 import org.scalatest._
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}

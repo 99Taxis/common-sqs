@@ -1,9 +1,10 @@
-package com.taxis99.sqs
+package com.taxis99.amazon.sqs
 
 import akka.actor.ActorSystem
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
-import org.elasticmq.rest.sqs.{SQSLimits, SQSRestServer, SQSRestServerBuilder}
+import com.taxis99.amazon.ElasticMQ
+import org.elasticmq.rest.sqs.SQSRestServer
 
 object SqsClientFactory {
 
@@ -25,8 +26,7 @@ object SqsClientFactory {
   }
 
   def inMemory(actorSystem: ActorSystem): (SQSRestServer, AmazonSQSAsync) = {
-    val server = SQSRestServerBuilder.withDynamicPort()
-        .withSQSLimits(SQSLimits.Relaxed).start()
+    val server = ElasticMQ.inMemory()
     val port = server.waitUntilStarted().localAddress.getPort()
     val endpoint = new EndpointConfiguration(s"http://localhost:$port", s"elasticmq-$port")
     val conn = AmazonSQSAsyncClientBuilder.standard()

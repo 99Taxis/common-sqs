@@ -1,7 +1,7 @@
 package mocks
 
 import akka.actor.ActorRef
-import com.taxis99.sqs.{SqsClient, SqsConsumer}
+import com.taxis99.amazon.sqs.{SqsClient, SqsConsumer}
 
 import scala.concurrent.{ExecutionContext, Future}
 

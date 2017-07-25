@@ -1,4 +1,4 @@
-package com.taxis99.sqs
+package com.taxis99.amazon.sqs
 
 import akka.Done
 import play.api.libs.json.{Json, Writes}

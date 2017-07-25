@@ -1,6 +1,6 @@
 package mocks
 
-import com.taxis99.sqs.{SqsClient, SqsProducer}
+import com.taxis99.amazon.sqs.{SqsClient, SqsProducer}
 
 import scala.concurrent.ExecutionContext
 

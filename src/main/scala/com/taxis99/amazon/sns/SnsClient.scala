@@ -1,4 +1,4 @@
-package com.taxis99.sns
+package com.taxis99.amazon.sns
 
 import javax.inject.{Inject, Singleton}
 
@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.sns.scaladsl.SnsPublisher
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.sns.AmazonSNSAsync
-import com.taxis99.streams.Producer
+import com.taxis99.amazon.streams.Producer
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -34,7 +34,7 @@ class SnsClient @Inject()(config: Config)
     case Failure(e) => logger.error("Could not fetch SQS url", e)
   }
 
-  def producer(eventualtopicConfig: Future[SnsTopic]) = (value: JsValue) => eventualtopicConfig flatMap { t =>
+  def producer(eventualTopicConfig: Future[SnsTopic]) = (value: JsValue) => eventualTopicConfig flatMap { t =>
     Source.single(value) via Producer() runWith SnsPublisher.sink(t.arn)
   }
 }

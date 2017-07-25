@@ -1,4 +1,4 @@
-package com.taxis99.sqs
+package com.taxis99.amazon.sqs
 
 import scala.concurrent.{ExecutionContext, Future}
 
