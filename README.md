@@ -3,12 +3,20 @@ Common SQS
 
 A common library to abstract the Amazon SQS and SNS producers/consumers interactions.
 
+**Features:**
+
+- Auto SQS url discovery;
+- Auto SNS topic ARN discovery;
+- Back-pressure out of the box (via Akka Streams);
+- Message compaction (via MsgPack);
+
 ## Usage
 
-Add the package to your dependecies.
+Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
-libraryDependencies += "com.taxis99" %% "common-sqs" % "1.0.0"
+libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.0"
+resolvers += "bintray.99taxis OS releases" at "http://dl.bintray.com/content/99taxis/maven"
 ```
 
 Configure the queues in your configuration file (assuming you are using TypeSafe Config).
@@ -39,7 +47,7 @@ package consumers
 
 import javax.inject.{Inject, Singleton}
 
-import com.taxis99.sqs.{SqsClient, SqsConsumer}
+import com.taxis99.amazon.sqs.{SqsClient, SqsConsumer}
 import models.MyCustomType
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,7 +58,7 @@ class MyConsumer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient
 
   def consume(message: MyCustomType) = ???
 
-  // Manually start the consumer when the class is initialized
+  // Starts the consumer when the class is initialized
   startConsumer()
 }
 ```
@@ -60,7 +68,7 @@ package producers
 
 import javax.inject.{Inject, Singleton}
 
-import com.taxis99.sqs.{SqsClient, SqsProducer}
+import com.taxis99.amazon.sqs.{SqsClient, SqsProducer}
 import models.MyCustomType
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -71,9 +79,64 @@ class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient
 }
 ```
 
-## Integration Tests
+#### Play Framework
+
+Since this API relies at the JSR-330 Dependency Injection interface, the integration with the Play Framework using Guice is quite straightforward.
+
+One just need to create an `AmazonSQSClientAsync` or use `SqsClientFactory` to do so, and register your instances at the application `Module`. 
+
+```scala
+import com.google.inject.{AbstractModule, Provides}
+import com.taxis99.amazon.sqs.SqsClientFactory
+import consumers.MyConsumer
+import producers.MyProducer
+
+class Module extends AbstractModule {
+
+  @Provides
+  def amazonSqsClient(env: Environment): AmazonSQSAsyncClient = {
+    if (env.mode == Prod) {
+      SqsClientFactory.default()
+    } else {
+      SqsClientFactory.inMemory()
+      // If you have an ElasticMQ instance running in your machine 
+      // SqsClientFactory.atLocalhost()
+    }
+  }
+  
+  def configure = {
+    bind(classOf[MyConsumer]).asEagerSingleton()
+    bind(classOf[MyProducer]).asEagerSingleton()
+  }
+}
+
+```
+
+## Development & Build
+
+The best way to develop is through a TDD style, the test uses a in memory ElasticMQ to run the flows, allowing a fast interaction with the code.
+
+Other caveat is to run the tests against several scala versions: 
+
+```shell
+$ sbt
+> // Run tests against Scala 2.11 and 2.12
+> + test
+```
+
+**Integration tests**
+
+First you must launch an instance of the ElasticMQ server at `localhost:9324` then run the tests.
 
 ```shell
 $ docker-compose up -d
 $ sbt it:test
+```
+
+**Building**
+
+To cross compile the `jar` for Scala 2.11 and 2.12 use the `+` modifier.
+
+```shell
+$ sbt "+ package"
 ```
