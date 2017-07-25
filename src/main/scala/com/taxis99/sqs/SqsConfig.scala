@@ -2,7 +2,7 @@ package com.taxis99.sqs
 
 import scala.concurrent.{ExecutionContext, Future}
 
-private[this] trait SqsConfig {
+protected[this] trait SqsConfig {
   implicit def ec: ExecutionContext
   implicit def sqs: SqsClient
 

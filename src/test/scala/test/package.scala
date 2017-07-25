@@ -4,7 +4,7 @@ import akka.testkit.{ImplicitSender, TestKit, TestKitBase}
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.sqs.SqsClientFactory
 import org.scalatest._
-import org.scalatest.concurrent.{Futures, PatienceConfiguration}
+import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.time._
 
 package object test {

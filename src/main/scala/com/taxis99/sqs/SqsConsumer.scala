@@ -11,7 +11,7 @@ trait SqsConsumer[T] extends SqsConfig {
     * @param message The incoming message
     * @return A future with the result of this process
     */
-  def consume[A](message: T): Future[A]
+  def consume(message: T): Future[Any]
 
   /**
     * Cast the Json message to the expected type of the consume function.
@@ -32,7 +32,5 @@ trait SqsConsumer[T] extends SqsConfig {
     * Starts to receive message into the consume function.
     * @return A future completed when the consumer stopped
     */
-  protected def startConsumer()(implicit fjs: Reads[T]) = {
-    sqs.consumer(queueUrl)(onPull(_) flatMap consume)
-  }
+  protected def startConsumer()(implicit fjs: Reads[T]) = sqs.consumer(queueUrl)(onPull(_) flatMap consume)
 }

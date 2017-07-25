@@ -17,6 +17,7 @@ import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 @Singleton
 class SqsClient @Inject()(config: Config)
@@ -24,6 +25,8 @@ class SqsClient @Inject()(config: Config)
 
   protected val logger: Logger =
     Logger(LoggerFactory.getLogger(getClass.getName))
+
+  logger.info("SqsClient ready")
 
   implicit val materializer = ActorMaterializer()
 
@@ -36,10 +39,14 @@ class SqsClient @Inject()(config: Config)
     val queueName = config.getString(s"sqs.$queueKey")
     val queueUrl = sqs.getQueueUrlAsync(queueName).get().getQueueUrl
     SqsQueue(queueKey, queueName, queueUrl)
+  } andThen {
+    case Failure(e) => logger.error("Could not fetch SQS url", e)
   }
   
   def consumer[A](eventualQueueConfig: Future[SqsQueue])
                  (block: JsValue => Future[A]) = eventualQueueConfig flatMap { q =>
+
+    logger.info(s"Start consuming queue ${q.url}")
     // Get configuration options
     val waitTimeSeconds = config.as[Option[Int]](s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
     val maxBufferSize = config.as[Option[Int]](s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
@@ -49,7 +56,7 @@ class SqsClient @Inject()(config: Config)
     // Configure source to send all attributes from the message
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
       attributeNames = Seq(All), messageAttributeNames = Seq(MessageAttributeName("All")))
-    
+
     SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero)(block) runWith SqsAckSink(q.url)
   }
 

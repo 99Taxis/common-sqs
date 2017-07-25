@@ -4,7 +4,6 @@ import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.sqs.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures._
 import play.api.libs.json.Json
 import test.StreamSpec
@@ -13,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SqsClientSpec extends StreamSpec with BeforeAndAfter {
+class SqsClientSpec extends StreamSpec {
   val config = ConfigFactory.empty()
 
   def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {

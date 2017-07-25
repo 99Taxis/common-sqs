@@ -70,3 +70,10 @@ class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient
   def name = "key-of-my-queue"
 }
 ```
+
+## Integration Tests
+
+```shell
+$ docker-compose up -d
+$ sbt it:test
+```

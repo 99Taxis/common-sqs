@@ -11,11 +11,5 @@ object Producer {
     * Returns a producer flow graph.
     * @return A flow graph stage
     */
-  def apply(): Flow[JsValue, String, NotUsed] = Flow.fromGraph(GraphDSL.create() { implicit b =>
-    import GraphDSL.Implicits._
-
-    val serializer = b.add(Serializer.encode)
-
-    FlowShape(serializer.in, serializer.out)
-  })
+  def apply(): Flow[JsValue, String, NotUsed] = Serializer.encode
 }
