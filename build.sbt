@@ -18,8 +18,8 @@ lazy val root = (project in file(".")).
     libraryDependencies ++= Seq(
       "javax.inject"       % "javax.inject"             % "1",
       "com.amazonaws"      % "aws-java-sdk-sqs"         % "1.11.140",
-      "com.typesafe"       % "config"                   % "1.3.1",
-      "com.typesafe.play"  %% "play-json"               % "2.6.2"  % Provided,
+      "com.typesafe"       % "config"                   % "1.3.1" % Provided,
+      "com.typesafe.play"  %% "play-json"               % "2.6.2" % Provided,
       "com.lightbend.akka" %% "akka-stream-alpakka-sns" % "0.11",
       "com.lightbend.akka" %% "akka-stream-alpakka-sqs" % "0.10",
       "com.github.xuwei-k" %% "msgpack4z-core"          % "0.3.7",
