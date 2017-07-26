@@ -42,6 +42,8 @@ class SqsClientSpec extends StreamSpec {
     val unpackedMsg = Json.obj("foo" -> "bar")
     val packedMsg = Serializer.pack(unpackedMsg)
     val probe = TestProbe()
+
+    // Produce some message
     aws.sendMessageAsync(qUrl, packedMsg).get()
 
     sqs.consumer(Future.successful(sqsQ)) { value =>
@@ -58,18 +60,14 @@ class SqsClientSpec extends StreamSpec {
     val sqsQ = SqsQueue("producer-q", "producer-q-TEST", qUrl)
 
     val produce = sqs.producer(Future.successful(sqsQ))
-    
     val msg = Json.obj("foo" -> "bar")
-    produce(msg)
-
-    // Don't know why this is required to the message to appear on the
-    aws.sendMessageAsync(qUrl, msg.toString()).get()
-
-    val eventualMsgs: Future[Seq[String]] = Future {
-      aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
-    }
-
-    eventualMsgs map { msgs =>
+    
+    for {
+      _ <- produce(msg)
+      msgs <- Future {
+        aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
+      }
+    } yield {
       msgs should contain (Serializer.pack(msg))
     }
   }

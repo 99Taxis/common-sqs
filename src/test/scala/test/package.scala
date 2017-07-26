@@ -19,7 +19,7 @@ package object test {
   trait StreamSpec extends AsyncFlatSpec with Matchers with OptionValues with PatienceConfiguration
     with TestKitBase with ImplicitSender with BeforeAndAfterAll {
 
-    implicit lazy val system = ActorSystem("test", ConfigFactory.parseString("""
+    implicit lazy val system: ActorSystem = ActorSystem("test", ConfigFactory.parseString("""
         akka.actor.deployment.default.dispatcher = "akka.test.calling-thread-dispatcher"
       """))
 
@@ -35,8 +35,11 @@ package object test {
     implicit lazy val materializer = ActorMaterializer(settings)
 
     def withInMemoryQueue(testCode: (AmazonSQSAsync) => Future[Assertion]): Future[Assertion] = {
-      val (_, aws) = SqsClientFactory.inMemory(system)
-      testCode(aws) // "loan" the fixture to the test
+      val (server, aws) = SqsClientFactory.inMemory(system)
+      // "loan" the fixture to the test
+      testCode(aws) andThen {
+        case _ => server.stopAndWait()
+      }
     }
 
     override def afterAll {
