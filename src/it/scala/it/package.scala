@@ -1,24 +1,27 @@
-import java.util.concurrent.Executors
-
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{TestKit, TestKitBase}
 import com.taxis99.amazon.sqs.SqsClientFactory
+import com.typesafe.config.ConfigFactory
 import org.scalatest._
-import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.concurrent.PatienceConfiguration
+import org.scalatest.time.{Millis, Minute, Span}
 
 import scala.concurrent.ExecutionContext
 
 package object it {
 
-  trait BaseSpec extends AsyncFlatSpec with Matchers with OptionValues with PatienceConfiguration with RecoverMethods
-    with ScalaFutures with TestKitBase with BeforeAndAfterAll {
+  trait IntegrationSpec extends AsyncFlatSpec with Matchers with OptionValues with PatienceConfiguration
+    with TestKitBase with BeforeAndAfterAll {
 
-    implicit override def patienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(15, Millis)))
-    implicit override def executionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(6))
+    implicit lazy val system: ActorSystem = ActorSystem("test", ConfigFactory.parseString("""
+        akka.actor.deployment.default.dispatcher = "akka.test.calling-thread-dispatcher"
+      """))
 
-    implicit lazy val system = ActorSystem("test")
+    override implicit def executionContext: ExecutionContext = system.dispatcher
+
+    override implicit def patienceConfig = PatienceConfig(timeout =  Span(1, Minute), interval = Span(5, Millis))
+    
     implicit lazy val aws = SqsClientFactory.atLocalhost()
 
     val decider: Supervision.Decider = {

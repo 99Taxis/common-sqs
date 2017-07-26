@@ -4,12 +4,10 @@ import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.amazon.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.concurrent.ScalaFutures._
 import play.api.libs.json.Json
 import test.StreamSpec
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class SqsClientSpec extends StreamSpec {
@@ -24,15 +22,15 @@ class SqsClientSpec extends StreamSpec {
     aws.createQueueAsync(queueName).get().getQueueUrl
   }
 
-  "#getQueue" should "" in withInMemoryQueue { implicit aws =>
+  "#getQueue" should "return an SqsQueue config object eventually" in withInMemoryQueue { implicit aws =>
     createQueue("test-q-DEV")
     val sqs = new SqsClient(config)
     val q = sqs.getQueue(queueKey)
-
-    whenReady(q) { case SqsQueue(key, name, url) =>
-        key shouldBe queueKey
-        name shouldBe queueName
-        url should endWith (s"/queue/$queueName")
+    
+    q map { case SqsQueue(key, name, url) =>
+      key shouldBe queueKey
+      name shouldBe queueName
+      url should endWith (s"/queue/$queueName")
     }
   }
 
@@ -51,6 +49,7 @@ class SqsClientSpec extends StreamSpec {
     }
 
     probe expectMsg unpackedMsg
+    succeed
   }
   
   "#producer" should "produce message to the queue" in withInMemoryQueue { implicit aws =>
@@ -70,7 +69,7 @@ class SqsClientSpec extends StreamSpec {
       aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
     }
 
-    whenReady(eventualMsgs) { msgs =>
+    eventualMsgs map { msgs =>
       msgs should contain (Serializer.pack(msg))
     }
   }

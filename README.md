@@ -54,7 +54,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MyConsumer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) extends SqsConsumer[MyCustomType] {
-  def name = "key-of-my-queue"
+  def queue = "key-of-my-queue"
 
   def consume(message: MyCustomType) = ???
 

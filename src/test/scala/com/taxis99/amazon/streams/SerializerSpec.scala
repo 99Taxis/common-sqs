@@ -1,7 +1,6 @@
 package com.taxis99.amazon.streams
 
 import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.model.Message
 import play.api.libs.json.Json
 import test.StreamSpec
@@ -18,19 +17,17 @@ class SerializerSpec extends StreamSpec {
   val jsonMsg = Json.toJson(msg)
 
   "#econde" should "return the string representation of the JsValue" in {
-    val probe = TestProbe()
-
-    Source.single(jsonMsg) via Serializer.encode runWith Sink.actorRef(probe.ref, "ok")
-    probe expectMsg Serializer.pack(jsonMsg)
+    Source.single(jsonMsg) via Serializer.encode runWith Sink.head map { result =>
+      result shouldBe Serializer.pack(jsonMsg)
+    }
   }
 
   "#decode" should "return the JsValue from a Amazon SQS message" in {
-    val probe = TestProbe()
-    
     val sqsMsg = new Message()
     sqsMsg.setBody(Serializer.pack(jsonMsg))
 
-    Source.single(sqsMsg) via Serializer.decode runWith Sink.actorRef(probe.ref, "ok")
-    probe expectMsg jsonMsg
+    Source.single(sqsMsg) via Serializer.decode runWith Sink.head map { result =>
+      result shouldBe jsonMsg
+    }
   }
 }

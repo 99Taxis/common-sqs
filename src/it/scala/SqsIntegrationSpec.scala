@@ -3,14 +3,14 @@ package com.taxis99.amazon.sqs
 import akka.testkit.TestProbe
 import com.taxis99.amazon.streams.Serializer
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import it.BaseSpec
-import mocks.{TestConsumer, TestProducer, TestType}
+import it.IntegrationSpec
+import it.mocks.{TestConsumer, TestProducer, TestType}
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class SqsIntegrationSpec extends BaseSpec {
+class SqsIntegrationSpec extends IntegrationSpec {
 
   val queueName = "integration-test-q"
   val config = ConfigFactory

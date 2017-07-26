@@ -1,4 +1,4 @@
-package mocks
+package it.mocks
 
 import play.api.libs.json.Json
 

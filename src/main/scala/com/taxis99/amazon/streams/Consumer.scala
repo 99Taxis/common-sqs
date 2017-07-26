@@ -74,7 +74,10 @@ object Consumer {
   private def ackOrRetry[A](block: JsValue => Future[A])
                    (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
-      block(value) map (_ => Ack())
+      block(value) map {
+        case RequeueWithDelay(delay) => RequeueWithDelay(delay)
+        case _ => Ack()
+      }
     }
 
   /**
@@ -87,6 +90,7 @@ object Consumer {
                      (block: JsValue => Future[A])
                      (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
+      println(s"L100: Threads that's executing: ${Thread.currentThread().getName}")
       block(value) map (_ => Ack()) recover {
         case _: Throwable => RequeueWithDelay(delay.toSeconds.toInt)
       }
