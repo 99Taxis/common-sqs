@@ -55,7 +55,9 @@ import models.MyCustomType
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MyConsumer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) extends SqsConsumer[MyCustomType] {
+class MyConsumer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
+  extends SqsConsumer[MyCustomType] {
+  
   def queue = "key-of-my-queue"
 
   def consume(message: MyCustomType) = ???
@@ -76,8 +78,10 @@ import models.MyCustomType
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) extends SqsProducer[MyCustomType] {
-  def name = "key-of-my-queue"
+class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
+  extends SqsProducer[MyCustomType] {
+  
+  def queue = "key-of-my-queue"
 }
 ```
 
@@ -150,7 +154,7 @@ $ sbt "+ package"
 
 ## License
 
-`common-sqs` is open source software released under the Apache 2.0 License.
+`common-sqs` is open source software released under the Apache 2.0 License by **99Taxis**.
 
 See the [LICENSE](https://github.com/99Taxis/common-sqs/blob/master/LICENSE) file for details.
 
