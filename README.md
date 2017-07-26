@@ -10,6 +10,8 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 - Back-pressure out of the box (via Akka Streams);
 - Message compaction (via MsgPack);
 
+[![License](http://img.shields.io/:license-Apache%202-red.svg)](https://github.com/99Taxis/common-sqs/blob/master/LICENSE "Apache 2.0 Licence") [![Bintray](https://img.shields.io/bintray/v/99taxis/maven/common-sqs.svg)](https://bintray.com/99taxis/maven/common-sqs/_latestVersion) [![Maintenance](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/99Taxis/common-sqs/commits/master)
+
 ## Usage
 
 Add the package to your dependencies and the bintray resolver.
@@ -145,3 +147,10 @@ To cross compile the `jar` for Scala 2.11 and 2.12 use the `+` modifier.
 ```shell
 $ sbt "+ package"
 ```
+
+## License
+
+`common-sqs` is open source software released under the Apache 2.0 License.
+
+See the [LICENSE](https://github.com/99Taxis/common-sqs/blob/master/LICENSE) file for details.
+

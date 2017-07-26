@@ -14,6 +14,7 @@ lazy val root = (project in file(".")).
       version      := "0.1.0"
     )),
     name := "common-sqs",
+    licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html")),
     crossScalaVersions := Seq("2.11.11", "2.12.2"),
     libraryDependencies ++= Seq(
       "javax.inject"       % "javax.inject"             % "1",
