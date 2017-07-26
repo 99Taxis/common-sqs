@@ -18,7 +18,7 @@ Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
 libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.0"
-resolvers += "bintray.99taxis OS releases" at "http://dl.bintray.com/content/99taxis/maven"
+resolvers += Resolver.bintrayRepo("99Taxis", "maven")
 ```
 
 Configure the queues in your configuration file (assuming you are using TypeSafe Config).

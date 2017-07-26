@@ -18,8 +18,7 @@ class SqsIntegrationSpec extends IntegrationSpec {
     .withValue("sqs", ConfigValueFactory.fromMap(Map(
       queueName -> queueName
     ).asJava))
-
-  val queueUrl = aws.createQueueAsync(queueName).get().getQueueUrl
+  aws.createQueueAsync(queueName).get().getQueueUrl
 
   implicit val sqs = new SqsClient(config)
 
@@ -28,11 +27,11 @@ class SqsIntegrationSpec extends IntegrationSpec {
   val msg = TestType("bar", 100)
   val packedMessage = Serializer.pack(Json.toJson(msg))
 
-  val producer = new TestProducer(queueName)
   val consumer = new TestConsumer(queueName, probe.ref)
+  val producer = new TestProducer(queueName)
 
   it should "consume the message produce by the producer to the queue" in {
-    producer.produce(msg).map { _ =>
+    producer.produce(msg) map { _ =>
       probe expectMsg (10.seconds, msg)
       succeed
     }
