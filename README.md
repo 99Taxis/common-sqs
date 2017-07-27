@@ -93,7 +93,7 @@ One just need to create an `AmazonSQSClientAsync` or use `SqsClientFactory` to d
 
 ```scala
 import com.google.inject.{AbstractModule, Provides}
-import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
 import com.typesafe.config.Config
 import com.taxis99.amazon.sqs.SqsClientFactory
 import play.api.{Configuration, Environment}
@@ -106,7 +106,7 @@ class Module extends AbstractModule {
   @Provides
   def amazonSqsClient(env: Environment): AmazonSQSAsync = {
     if (env.mode == Prod) {
-      SqsClientFactory.default()
+      AmazonSQSAsyncClientBuilder.defaultClient()
     } else {
       SqsClientFactory.atLocalhost()
     }

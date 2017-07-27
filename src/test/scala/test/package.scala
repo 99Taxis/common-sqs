@@ -35,7 +35,7 @@ package object test {
     implicit lazy val materializer = ActorMaterializer(settings)
 
     def withInMemoryQueue(testCode: (AmazonSQSAsync) => Future[Assertion]): Future[Assertion] = {
-      val (server, aws) = SqsClientFactory.inMemory(system)
+      val (server, aws) = SqsClientFactory.inMemory(Some(system))
       // "loan" the fixture to the test
       testCode(aws) andThen {
         case _ => server.stopAndWait()
