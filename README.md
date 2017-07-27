@@ -10,15 +10,15 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 - Back-pressure out of the box (via Akka Streams);
 - Message compaction (via MsgPack);
 
-[![License](http://img.shields.io/:license-Apache%202-red.svg)](https://github.com/99Taxis/common-sqs/blob/master/LICENSE "Apache 2.0 Licence") [![Bintray](https://img.shields.io/bintray/v/99taxis/maven/common-sqs.svg)](https://bintray.com/99taxis/maven/common-sqs/_latestVersion) [![Maintenance](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/99Taxis/common-sqs/commits/master)
+[![License](http://img.shields.io/:license-Apache%202-red.svg)](https://github.com/99Taxis/common-sqs/blob/master/LICENSE "Apache 2.0 Licence") [![Bintray](https://img.shields.io/bintray/v/99taxis/maven/common-sqs.svg)](https://bintray.com/99taxis/maven/common-sqs/_latestVersion) [![Maintenance](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/99Taxis/common-sqs/commits/master) [![Build Status](https://travis-ci.org/99Taxis/common-sqs.svg?branch=master)](https://travis-ci.org/99Taxis/common-sqs)
 
 ## Usage
 
 Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
-libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.0"
-resolvers += Resolver.bintrayRepo("99Taxis", "maven")
+libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.1"
+resolvers += Resolver.bintrayRepo("99taxis", "maven")
 ```
 
 Configure the queues in your configuration file (assuming you are using TypeSafe Config).
