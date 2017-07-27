@@ -7,7 +7,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
 import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.scaladsl.Source
+import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.services.sqs.AmazonSQSAsync
+import com.amazonaws.services.sqs.model.{GetQueueUrlRequest, GetQueueUrlResult}
 import com.taxis99.amazon.streams.{Consumer, Producer}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
@@ -16,7 +18,7 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Failure
 
 @Singleton
@@ -34,12 +36,16 @@ class SqsClient @Inject()(config: Config)
 
   logger.info("SQS Client ready")
 
-  def getQueue(queueKey: String): Future[SqsQueue] = Future {
+  def getQueue(queueKey: String): Future[SqsQueue] = {
+    val promise = Promise[SqsQueue]
     val queueName = config.getString(s"sqs.$queueKey")
-    val queueUrl = sqs.getQueueUrlAsync(queueName).get().getQueueUrl
-    SqsQueue(queueKey, queueName, queueUrl)
-  } andThen {
-    case Failure(e) => logger.error("Could not fetch SQS url", e)
+    sqs.getQueueUrlAsync(queueName, new AsyncHandler[GetQueueUrlRequest, GetQueueUrlResult] {
+      override def onError(exception: Exception): Unit = promise.failure(exception)
+
+      override def onSuccess(request: GetQueueUrlRequest, result: GetQueueUrlResult): Unit =
+        promise.success(SqsQueue(queueKey, queueName, result.getQueueUrl))
+    })
+    promise.future
   }
   
   def consumer[A](eventualQueueConfig: Future[SqsQueue])
