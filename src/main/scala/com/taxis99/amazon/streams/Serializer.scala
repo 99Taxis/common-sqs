@@ -16,24 +16,24 @@ object Serializer {
     Logger(LoggerFactory.getLogger(getClass.getName))
 
   /**
-    * Returns a hexadecimal string from a JsValue packed with MsgPack.
+    * Returns a optimized string from a JsValue packed with MsgPack.
     * @param value the JSON value
     * @return a byte array string representation of the JsValue
     */
   def pack(value: JsValue): String = {
     val packer = MsgOutBuffer.create()
     jsonVal.pack(packer, value)
-    packer.result().map("%02x".format(_)).mkString
+    packer.result().map(_.toChar).mkString
   }
 
 
   /**
-    * Returns a JsValue from a hexadecimal value unpacked with MsgPack.
+    * Returns a JsValue from a optimized value unpacked with MsgPack.
     * @param value The byte array string
     * @return
     */
   def unpack(value: String): JsValue = {
-    val bytes: Array[Byte] = value.sliding(2,2).map(Integer.parseInt(_, 16).toByte).toArray
+    val bytes: Array[Byte] = value.toCharArray.map(_.toByte)
     val unpacker = MsgInBuffer.apply(bytes)
     val unpacked = jsonVal.unpack(unpacker)
     unpacked.valueOr { e =>

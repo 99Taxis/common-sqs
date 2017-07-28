@@ -19,7 +19,6 @@ import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.Failure
 
 @Singleton
 class SqsClient @Inject()(config: Config)
@@ -40,7 +39,8 @@ class SqsClient @Inject()(config: Config)
     val promise = Promise[SqsQueue]
     val queueName = config.getString(s"sqs.$queueKey")
     sqs.getQueueUrlAsync(queueName, new AsyncHandler[GetQueueUrlRequest, GetQueueUrlResult] {
-      override def onError(exception: Exception): Unit = promise.failure(exception)
+      override def onError(exception: Exception): Unit =
+        promise.failure(exception)
 
       override def onSuccess(request: GetQueueUrlRequest, result: GetQueueUrlResult): Unit =
         promise.success(SqsQueue(queueKey, queueName, result.getQueueUrl))
@@ -62,7 +62,7 @@ class SqsClient @Inject()(config: Config)
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
       attributeNames = Seq(All), messageAttributeNames = Seq(MessageAttributeName("All")))
 
-    SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero)(block) runWith SqsAckSink(q.url)
+    SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero, maxRetries)(block) runWith SqsAckSink(q.url)
   }
 
   def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig flatMap { q =>

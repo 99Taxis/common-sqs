@@ -1,6 +1,10 @@
 version: "3"
 services:
-  sqs:
-    image: s12v/elasticmq
+  aws:
+    image: pafortin/goaws
     ports:
       - 9324:9324
+      - 9292:9292
+    volumes:
+      - ./src/it/resources/goaws.yml:/conf/goaws.yaml
+    command: ["-debug"]

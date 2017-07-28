@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.Failure
 
 @Singleton
 class SnsClient @Inject()(config: Config)
@@ -30,13 +29,13 @@ class SnsClient @Inject()(config: Config)
 
   def getTopic(topicKey: String): Future[SnsTopic] = {
     val promise = Promise[SnsTopic]
-    val topicName = config.getString(s"sqs.$topicKey")
+    val topicName = config.getString(s"sns.$topicKey")
     sns.createTopicAsync(topicName, new AsyncHandler[CreateTopicRequest, CreateTopicResult] {
       override def onError(exception: Exception) =
         promise.failure(exception)
       override def onSuccess(request: CreateTopicRequest, result: CreateTopicResult) =
         promise.success(SnsTopic(topicKey, topicName, result.getTopicArn))
-    } )
+    })
     promise.future
   }
 

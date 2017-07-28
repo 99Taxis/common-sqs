@@ -1,6 +1,7 @@
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{TestKit, TestKitBase}
+import com.taxis99.amazon.sns.SnsClientFactory
 import com.taxis99.amazon.sqs.SqsClientFactory
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
@@ -22,7 +23,8 @@ package object it {
 
     override implicit def patienceConfig = PatienceConfig(timeout =  Span(1, Minute), interval = Span(5, Millis))
     
-    implicit lazy val aws = SqsClientFactory.atLocalhost()
+    implicit lazy val amazonSqsConn = SqsClientFactory.atLocalhost(9324)
+    implicit lazy val amazonSnsConn = SnsClientFactory.atLocalhost(9292)
 
     val decider: Supervision.Decider = {
       case _ => Supervision.Stop

@@ -5,15 +5,20 @@ import akka.stream.FlowShape
 import akka.stream.alpakka.sqs.{Ack, MessageAction, RequeueWithDelay}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Zip}
 import com.amazonaws.services.sqs.model.Message
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Failure
 
 object Consumer {
 
   protected val LEVEL_OF_PARALLELISM = 10
+
+  protected val logger: Logger = Logger(LoggerFactory.getLogger(getClass.getName))
 
   /**
     * Returns a consumer flow graph.
@@ -77,6 +82,8 @@ object Consumer {
       block(value) map {
         case RequeueWithDelay(delay) => RequeueWithDelay(delay)
         case _ => Ack()
+      } andThen {
+        case Failure(e) => logger.error(s"Could not consume message $value", e)
       }
     }
 
@@ -92,6 +99,8 @@ object Consumer {
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
       block(value) map (_ => Ack()) recover {
         case _: Throwable => RequeueWithDelay(delay.toSeconds.toInt)
+      } andThen {
+        case Failure(e) => logger.error(s"Could not consume message $value", e)
       }
     }
 }

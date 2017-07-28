@@ -25,8 +25,12 @@ Configure the queues in your configuration file (assuming you are using TypeSafe
 
 ```hocon
 sqs {
-    key-of-my-queue = "my-queue-name" 
+    my-queue = "my-queue-name" 
     another-queue   = "queues-are-great"
+}
+
+sns {
+    my-topic = "my-cool-topic"
 }
 ```
 
@@ -58,7 +62,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MyConsumer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
   extends SqsConsumer[MyCustomType] {
   
-  def queue = "key-of-my-queue"
+  def queue = "my-queue"
 
   def consume(message: MyCustomType) = ???
 
@@ -81,7 +85,25 @@ import scala.concurrent.{ExecutionContext, Future}
 class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
   extends SqsProducer[MyCustomType] {
   
-  def queue = "key-of-my-queue"
+  def queue = "my-queue"
+}
+```
+
+```scala
+package notifications
+
+import javax.inject.{Inject, Singleton}
+
+import com.taxis99.amazon.sqs.{SqsClient, SqsProducer}
+import models.MyCustomType
+
+import scala.concurrent.{ExecutionContext, Future}
+
+@Singleton
+class MyNotification @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
+  extends SnsProducer[MyCustomType] {
+  
+  def topic = "my-topic"
 }
 ```
 

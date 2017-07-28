@@ -1,0 +1,16 @@
+Local:                              
+  Host: localhost
+  SqsPort: 9324
+  SnsPort: 9292
+  LogMessages: true
+  Queues:
+    - Name: integration-test-q
+    - Name: sns-test-q-1
+    - Name: sns-test-q-2
+  Topics:
+    - Name: integration-test-topic
+      Subscriptions:
+        - QueueName: sns-test-q-1
+          Raw: true
+        - QueueName: sns-test-q-2
+          Raw: true
