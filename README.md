@@ -17,7 +17,7 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
-libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.1"
+libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.2"
 resolvers += Resolver.bintrayRepo("99taxis", "maven")
 ```
 
