@@ -2,7 +2,7 @@ package com.taxis99.amazon.sqs
 
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.amazon.streams.Serializer
+import com.taxis99.amazon.serializers.PlayJson
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import play.api.libs.json.Json
 import test.StreamSpec
@@ -39,18 +39,17 @@ class SqsClientSpec extends StreamSpec {
     val qUrl = createQueue("consumer-q-TEST")
     val sqsQ = SqsQueue("consumer-q", "consumer-q-TEST", qUrl)
 
-    val unpackedMsg = Json.obj("foo" -> "bar")
-    val packedMsg = Serializer.pack(unpackedMsg)
+    val jsonMsg = Json.obj("foo" -> "bar")
     val probe = TestProbe()
 
     // Produce some message
-    aws.sendMessageAsync(qUrl, packedMsg).get()
+    aws.sendMessageAsync(qUrl, jsonMsg.toString()).get()
 
-    sqs.consumer(Future.successful(sqsQ)) { value =>
+    sqs.consumer(Future.successful(sqsQ), PlayJson) { value =>
       Future.successful(probe.ref ! value)
     }
 
-    probe expectMsg unpackedMsg
+    probe expectMsg jsonMsg
     succeed
   }
   
@@ -59,7 +58,7 @@ class SqsClientSpec extends StreamSpec {
     val qUrl = createQueue("producer-q-TEST")
     val sqsQ = SqsQueue("producer-q", "producer-q-TEST", qUrl)
 
-    val produce = sqs.producer(Future.successful(sqsQ))
+    val produce = sqs.producer(Future.successful(sqsQ), PlayJson)
     val msg = Json.obj("foo" -> "bar")
     
     for {
@@ -68,7 +67,7 @@ class SqsClientSpec extends StreamSpec {
         aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
       }
     } yield {
-      msgs should contain (Serializer.pack(msg))
+      msgs should contain (msg.toString())
     }
   }
 }

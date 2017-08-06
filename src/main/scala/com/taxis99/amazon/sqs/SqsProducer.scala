@@ -1,6 +1,7 @@
 package com.taxis99.amazon.sqs
 
 import akka.Done
+import com.taxis99.amazon.serializers.{ISerializer, PlayJson}
 import play.api.libs.json.{Json, Writes}
 
 import scala.concurrent.Future
@@ -13,6 +14,6 @@ trait SqsProducer[T] extends SqsConfig {
     * @return A future completed when the message was sent
     */
   def produce(message: T)(implicit tjs: Writes[T]): Future[Done] = {
-    sqs.producer(queueConfig)(Json.toJson(message))
+    sqs.producer(queueConfig, serializer)(Json.toJson(message))
   }
 }

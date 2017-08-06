@@ -2,6 +2,7 @@ package com.taxis99.amazon.sqs
 
 import javax.inject._
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
@@ -10,6 +11,7 @@ import akka.stream.scaladsl.Source
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.{GetQueueUrlRequest, GetQueueUrlResult}
+import com.taxis99.amazon.serializers.ISerializer
 import com.taxis99.amazon.streams.{Consumer, Producer}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
@@ -20,6 +22,14 @@ import play.api.libs.json.JsValue
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
+/**
+  * The SQS client provides an abstraction to interact with Amazon SQS queues through Akka Stream. The client is
+  * responsible to manage the queue configuration automatically fetching its information from AWS directly.
+  * @param config      The configuration object
+  * @param actorSystem The actor system
+  * @param ec          The default execution context
+  * @param sqs         The Amazon SQS Async client
+  */
 @Singleton
 class SqsClient @Inject()(config: Config)
                          (implicit actorSystem: ActorSystem, ec: ExecutionContext, sqs: AmazonSQSAsync) {
@@ -35,6 +45,12 @@ class SqsClient @Inject()(config: Config)
 
   logger.info("SQS Client ready")
 
+  /**
+    * Returns a SQS configuration object from the given configuration key. This method will fetch automatically
+    * the queue name and URL from Amazon.
+    * @param queueKey The queue configuration key
+    * @return The eventual SQS configuration object
+    */
   def getQueue(queueKey: String): Future[SqsQueue] = {
     val promise = Promise[SqsQueue]
     val queueName = config.getString(s"sqs.$queueKey")
@@ -47,9 +63,16 @@ class SqsClient @Inject()(config: Config)
     })
     promise.future
   }
-  
-  def consumer[A](eventualQueueConfig: Future[SqsQueue])
-                 (block: JsValue => Future[A]) = eventualQueueConfig flatMap { q =>
+
+  /**
+    * Materializes a consumer flow from a SQS source, handling the Ack of messages when all steps are successful.
+    * @param eventualQueueConfig The future with the queue configuration object
+    * @param block The consumer function to be applied to all incoming messages
+    * @tparam A The expected consumer class type
+    * @return The eventual consumer end event
+    */
+  def consumer[A](eventualQueueConfig: Future[SqsQueue], serializer: ISerializer)
+                 (block: JsValue => Future[A]): Future[Done] = eventualQueueConfig flatMap { q =>
 
     logger.info(s"Start consuming queue ${q.url}")
     // Get configuration options
@@ -62,10 +85,15 @@ class SqsClient @Inject()(config: Config)
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
       attributeNames = Seq(All), messageAttributeNames = Seq(MessageAttributeName("All")))
 
-    SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero, maxRetries)(block) runWith SqsAckSink(q.url)
+    SqsSource(q.url, sqsSettings) via Consumer(serializer, Duration.Zero, maxRetries)(block) runWith SqsAckSink(q.url)
   }
 
-  def producer(eventualQueueConfig: Future[SqsQueue]) = (value: JsValue) => eventualQueueConfig flatMap { q =>
-    Source.single(value) via Producer() runWith SqsSink(q.url)
+  /**
+    * Materializes a producer flow to a SQS sink.
+    * @param eventualQueueConfig The future with the queue configuration object
+    * @return A producer function for the given queue configuration
+    */
+  def producer(eventualQueueConfig: Future[SqsQueue], serializer: ISerializer): (JsValue) => Future[Done] = (value: JsValue) => eventualQueueConfig flatMap { q =>
+    Source.single(value) via Producer(serializer) runWith SqsSink(q.url)
   }
 }

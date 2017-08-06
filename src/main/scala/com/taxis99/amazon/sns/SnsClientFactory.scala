@@ -9,7 +9,7 @@ object SnsClientFactory {
     * Returns a Amazons SNS client connected to an endpoint at localhost.
     */
   def atLocalhost(port: Int = 9292): AmazonSNSAsync = {
-    val endpoint = new EndpointConfiguration(s"http://localhost:$port", "elasticmq")
+    val endpoint = new EndpointConfiguration(s"http://localhost:$port", "sns-elasticmq")
     AmazonSNSAsyncClientBuilder.standard()
       .withEndpointConfiguration(endpoint)
       .build()

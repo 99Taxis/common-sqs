@@ -3,6 +3,7 @@ package com.taxis99.amazon.streams
 import akka.stream.alpakka.sqs.{Ack, RequeueWithDelay}
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.services.sqs.model.Message
+import com.taxis99.amazon.serializers.PlayJson
 import org.scalatest.concurrent.PatienceConfiguration
 import play.api.libs.json.{JsValue, Json}
 import test.StreamSpec
@@ -13,14 +14,14 @@ import scala.concurrent.duration._
 
 class ConsumerSpec extends StreamSpec with PatienceConfiguration {
   val msg = Json.obj("foo" -> "bar")
-  val packedMsg = Serializer.pack(msg)
+  val strMsg = msg.toString()
 
   "#apply" should "send an Ack and delete the message from queue if the block fn succeeds" in {
     val fn = (_: JsValue) => Future.successful("ok")
     val msg = new Message()
-    msg.setBody(packedMsg)
+    msg.setBody(strMsg)
 
-    Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.head map { result =>
+    Source.single(msg) via Consumer(PlayJson, Duration.Zero)(fn) runWith Sink.head map { result =>
       result shouldBe ((msg, Ack()))
     }
   }
@@ -28,10 +29,10 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
   it should "not delete message from queue if the block fn fails" in {
     val fn = (_: JsValue) => Future.failed(new Exception("nok"))
     val msg = new Message()
-    msg.setBody(packedMsg)
+    msg.setBody(strMsg)
 
     recoverToSucceededIf[Exception] {
-      Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.headOption
+      Source.single(msg) via Consumer(PlayJson, Duration.Zero)(fn) runWith Sink.headOption
     }
   }
 
@@ -41,7 +42,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     msg.setBody("{not a valid JSON}")
 
     recoverToSucceededIf[Exception] {
-      Source.single(msg) via Consumer(Duration.Zero)(fn) runWith Sink.headOption
+      Source.single(msg) via Consumer(PlayJson, Duration.Zero)(fn) runWith Sink.headOption
     }
   }
 
@@ -50,7 +51,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     val msg = new Message()
     msg.setAttributes(Map("ApproximateReceiveCount" -> "350").asJava)
 
-    Source.single(msg) via Consumer(Duration.Zero, 350)(fn) runWith Sink.headOption map { msg =>
+    Source.single(msg) via Consumer(PlayJson, Duration.Zero, 350)(fn) runWith Sink.headOption map { msg =>
       msg shouldBe None
     }
   }
@@ -60,7 +61,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     val fn = (_: JsValue) => Future.successful(requeue)
     val msg = new Message()
 
-    Source.single(msg) via Consumer(Duration.Zero, 350)(fn) runWith Sink.head map { result =>
+    Source.single(msg) via Consumer(PlayJson, Duration.Zero, 350)(fn) runWith Sink.head map { result =>
       result shouldBe ((msg, requeue))
     }
   }
@@ -68,9 +69,9 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
   it should "send an Ack and delete the message from queue if the block fn succeeds with requeue activated" in {
     val fn = (_: JsValue) => Future.successful("ok")
     val msg = new Message()
-    msg.setBody(packedMsg)
-    
-    Source.single(msg) via Consumer(1.minute)(fn) runWith Sink.head map { result =>
+    msg.setBody(strMsg)
+
+    Source.single(msg) via Consumer(PlayJson, 1.minute)(fn) runWith Sink.head map { result =>
       result shouldBe ((msg, Ack()))
     }
   }
@@ -78,9 +79,9 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
   it should "requeue the message with the given delay if block fn fails" in {
     val fn = (_: JsValue) => Future.failed(new Exception("nok"))
     val msg = new Message()
-    msg.setBody(packedMsg)
+    msg.setBody(strMsg)
 
-    Source.single(msg) via Consumer(1.minute)(fn) runWith Sink.head map { result =>
+    Source.single(msg) via Consumer(PlayJson, 1.minute)(fn) runWith Sink.head map { result =>
       result shouldBe ((msg, RequeueWithDelay(60)))
     }
   }

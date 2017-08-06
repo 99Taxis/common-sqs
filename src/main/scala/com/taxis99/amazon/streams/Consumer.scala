@@ -5,6 +5,7 @@ import akka.stream.FlowShape
 import akka.stream.alpakka.sqs.{Ack, MessageAction, RequeueWithDelay}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Zip}
 import com.amazonaws.services.sqs.model.Message
+import com.taxis99.amazon.serializers.ISerializer
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
@@ -25,7 +26,7 @@ object Consumer {
     * @param block The message execution block
     * @return A flow graph stage
     */
-  def apply[A](delay: Duration, maxRetries: Int = 200)
+  def apply[A](serializer: ISerializer, delay: Duration, maxRetries: Int = 200)
               (block: JsValue => Future[A])
               (implicit ec: ExecutionContext): Flow[Message, (Message, MessageAction), NotUsed] = {
 
@@ -45,8 +46,8 @@ object Consumer {
 
       // Max retries not reached
       filter ~> bcast
-      bcast.out(0) ~>                                      merge.in0
-      bcast.out(1) ~> Serializer.decode ~> failStrategy ~> merge.in1
+      bcast.out(0) ~>                                                  merge.in0
+      bcast.out(1) ~> Serializer.decode(serializer) ~> failStrategy ~> merge.in1
 
       FlowShape(filter.in, merge.out)
     })

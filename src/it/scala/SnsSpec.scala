@@ -29,7 +29,7 @@ class SnsSpec extends IntegrationSpec {
   val publisher = new TestPublisher("topic")
   val consumer1 = new TestConsumer("q1", probeA.ref)
   val consumer2 = new TestConsumer("q2", probeB.ref)
-  
+
   it should "publish a message to an topic and deliver to all queues subscribed" in {
     val msg = TestType("bar", 100)
 

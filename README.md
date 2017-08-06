@@ -8,7 +8,7 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 - Auto SQS url discovery;
 - Auto SNS topic ARN discovery;
 - Back-pressure out of the box (via Akka Streams);
-- Message compaction (via MsgPack);
+- Optional message compression (via MsgPack);
 
 [![License](http://img.shields.io/:license-Apache%202-red.svg)](https://github.com/99Taxis/common-sqs/blob/master/LICENSE "Apache 2.0 Licence") [![Bintray](https://img.shields.io/bintray/v/99taxis/maven/common-sqs.svg)](https://bintray.com/99taxis/maven/common-sqs/_latestVersion) [![Maintenance](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/99Taxis/common-sqs/commits/master) [![Build Status](https://travis-ci.org/99Taxis/common-sqs.svg?branch=master)](https://travis-ci.org/99Taxis/common-sqs)
 
@@ -17,7 +17,7 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
-libraryDependencies += "com.taxis99" %% "common-sqs" % "0.1.2"
+libraryDependencies += "com.taxis99" %% "common-sqs" % "0.2.0"
 resolvers += Resolver.bintrayRepo("99taxis", "maven")
 ```
 
@@ -94,14 +94,14 @@ package notifications
 
 import javax.inject.{Inject, Singleton}
 
-import com.taxis99.amazon.sqs.{SqsClient, SqsProducer}
+import com.taxis99.amazon.sns.{SnsClient, SnsPublisher}
 import models.MyCustomType
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MyNotification @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
-  extends SnsProducer[MyCustomType] {
+class MyNotification @Inject()(implicit val ec: ExecutionContext, val sns: SnsClient) 
+  extends SnsPublisher[MyCustomType] {
   
   def topic = "my-topic"
 }
@@ -111,7 +111,7 @@ class MyNotification @Inject()(implicit val ec: ExecutionContext, val sqs: SqsCl
 
 Since this API relies at the JSR-330 Dependency Injection interface, the integration with the Play Framework using Guice is quite straightforward.
 
-One just need to create an `AmazonSQSClientAsync` or use `SqsClientFactory` to do so, and register your instances at the application `Module`. 
+One just need to create an `AmazonSQSClientAsync` and register your instances at the application `Module`. 
 
 ```scala
 import com.google.inject.{AbstractModule, Provides}
@@ -142,8 +142,34 @@ class Module extends AbstractModule {
     bind(classOf[MyProducer]).asEagerSingleton()
   }
 }
-
 ```
+
+### Message compression
+
+If you wish to use the advanced message compression (only for version `0.2.x`), you can specify the `MsgPack` serialization at your consumers, producers and publishers:
+
+```scala
+package producers
+
+import javax.inject.{Inject, Singleton}
+
+import com.taxis99.amazon.serializers.{ISerializer, MsgPack}
+import com.taxis99.amazon.sqs.{SqsClient, SqsProducer}
+import models.MyCustomType
+
+import scala.concurrent.{ExecutionContext, Future}
+
+@Singleton
+class MyProducer @Inject()(implicit val ec: ExecutionContext, val sqs: SqsClient) 
+  extends SqsProducer[MyCustomType] {
+
+  override def serializer: ISerializer = MsgPack
+   
+  def queue = "my-queue"
+}
+```
+
+Take in consideration that your consumers and producers **MUST** specify the same serialization method to work properly.
 
 ## Development & Build
 
