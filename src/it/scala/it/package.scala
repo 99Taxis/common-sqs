@@ -15,9 +15,7 @@ package object it {
   trait IntegrationSpec extends AsyncFlatSpec with Matchers with OptionValues with PatienceConfiguration
     with TestKitBase with BeforeAndAfterAll {
 
-    implicit lazy val system: ActorSystem = ActorSystem("test", ConfigFactory.parseString("""
-        akka.actor.deployment.default.dispatcher = "akka.test.calling-thread-dispatcher"
-      """))
+    implicit lazy val system: ActorSystem = ActorSystem("test")
 
     override implicit def executionContext: ExecutionContext = system.dispatcher
 
@@ -25,13 +23,6 @@ package object it {
     
     implicit lazy val amazonSqsConn = SqsClientFactory.atLocalhost(9324)
     implicit lazy val amazonSnsConn = SnsClientFactory.atLocalhost(9292)
-
-    val decider: Supervision.Decider = {
-      case _ => Supervision.Stop
-    }
-    val settings = ActorMaterializerSettings(system).withSupervisionStrategy(decider)
-
-    implicit lazy val materializer = ActorMaterializer(settings)
 
     override def afterAll {
       TestKit.shutdownActorSystem(system)

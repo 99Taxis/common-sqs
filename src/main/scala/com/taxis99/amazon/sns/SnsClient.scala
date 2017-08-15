@@ -3,7 +3,7 @@ package com.taxis99.amazon.sns
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.stream.alpakka.sns.scaladsl.{SnsPublisher => SnsSink}
 import akka.stream.scaladsl.Source
 import com.amazonaws.handlers.AsyncHandler
@@ -32,7 +32,15 @@ class SnsClient @Inject()(config: Config)
 
   protected val logger: Logger = Logger(LoggerFactory.getLogger(getClass.getName))
 
-  implicit val materializer = ActorMaterializer()
+  protected val resumeOnFailure: Supervision.Decider = {
+    case e: Exception => {
+      logger.error("SNS flow raised an exception", e)
+      Supervision.Resume
+    }
+  }
+  protected val settings = ActorMaterializerSettings(actorSystem).withSupervisionStrategy(resumeOnFailure)
+
+  implicit val materializer = ActorMaterializer(settings)
 
   logger.info("SNS Client ready")
 
@@ -46,10 +54,14 @@ class SnsClient @Inject()(config: Config)
     val promise = Promise[SnsTopic]
     val topicName = config.getString(s"sns.$topicKey")
     sns.createTopicAsync(topicName, new AsyncHandler[CreateTopicRequest, CreateTopicResult] {
-      override def onError(exception: Exception) =
+      override def onError(exception: Exception) = {
+        logger.error(s"Could not fetch queue arn for $topicName", exception)
         promise.failure(exception)
-      override def onSuccess(request: CreateTopicRequest, result: CreateTopicResult) =
+      }
+      override def onSuccess(request: CreateTopicRequest, result: CreateTopicResult) = {
+        logger.debug(s"Retrieved queue url for $topicName: ${result.getTopicArn}")
         promise.success(SnsTopic(topicKey, topicName, result.getTopicArn))
+      }
     })
     promise.future
   }
@@ -60,6 +72,7 @@ class SnsClient @Inject()(config: Config)
     * @return A publish function for the given queue configuration
     */
   def publisher(eventualTopicConfig: Future[SnsTopic], serializer: ISerializer) = (value: JsValue) => eventualTopicConfig flatMap { t =>
+    logger.debug(s"Publishing message $value with ${serializer.getClass.getSimpleName} serializer at ${t.name}")
     Source.single(value) via Producer(serializer) runWith SnsSink.sink(t.arn)
   }
 }

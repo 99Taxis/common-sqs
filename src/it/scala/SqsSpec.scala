@@ -29,4 +29,19 @@ class SqsSpec extends IntegrationSpec {
       succeed
     }
   }
+
+  it should "publish several messages" in {
+    val msg1 = TestType("1", 1)
+    val msg2 = TestType("2", 2)
+    val msg3 = TestType("3", 3)
+
+    for {
+      _ <- producer.produce(msg1)
+      _ <- producer.produce(msg2)
+      _ <- producer.produce(msg3)
+    } yield {
+      probe expectMsgAllOf (msg1, msg2, msg3)
+      succeed
+    }
+  }
 }

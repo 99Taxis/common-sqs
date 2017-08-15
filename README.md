@@ -17,7 +17,7 @@ A common library to abstract the Amazon SQS and SNS producers/consumers interact
 Add the package to your dependencies and the bintray resolver.
 
 ```sbtshell
-libraryDependencies += "com.taxis99" %% "common-sqs" % "0.2.0"
+libraryDependencies += "com.taxis99" %% "common-sqs" % "0.3.0"
 resolvers += Resolver.bintrayRepo("99taxis", "maven")
 ```
 
@@ -116,6 +116,7 @@ One just need to create an `AmazonSQSClientAsync` and register your instances at
 ```scala
 import com.google.inject.{AbstractModule, Provides}
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
+import com.amazonaws.services.sqs.{AmazonSNSAsync, AmazonSNSAsyncClientBuilder}
 import com.typesafe.config.Config
 import com.taxis99.amazon.sqs.SqsClientFactory
 import play.api.{Configuration, Environment}
@@ -125,6 +126,7 @@ import producers.MyProducer
 
 class Module extends AbstractModule {
 
+  
   @Provides
   def amazonSqsClient(env: Environment): AmazonSQSAsync = {
     if (env.mode == Prod) {
@@ -133,6 +135,15 @@ class Module extends AbstractModule {
       SqsClientFactory.atLocalhost()
     }
   }
+  
+  @Provides
+    def amazonSnsClient(env: Environment): AmazonSNSAsync = {
+      if (env.mode == Prod) {
+        AmazonSNSAsyncClientBuilder.defaultClient()
+      } else {
+        SqsClientFactory.atLocalhost()
+      }
+    }
   
   @Provides
   def config(config: Configuration): Config = config.underlying

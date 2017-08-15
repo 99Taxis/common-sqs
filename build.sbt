@@ -10,15 +10,15 @@ lazy val root = (project in file(".")).
     Defaults.itSettings,
     inThisBuild(List(
       organization := "com.taxis99",
-      scalaVersion := "2.12.2",
-      version      := "0.2.0"
+      scalaVersion := "2.12.3",
+      version      := "0.3.0"
     )),
     name := "common-sqs",
     licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html")),
-    crossScalaVersions := Seq("2.11.11", "2.12.2"),
+    crossScalaVersions := Seq("2.11.11", "2.12.3"),
     libraryDependencies ++= Seq(
       "javax.inject"       % "javax.inject"             % "1",
-      "com.amazonaws"      % "aws-java-sdk-sqs"         % "1.11.140",
+      "com.amazonaws"      % "aws-java-sdk-sqs"         % "1.11.172",
       "com.typesafe"       % "config"                   % "1.3.1" % Provided,
       "com.typesafe.play"  %% "play-json"               % "2.6.2" % Provided,
       "com.lightbend.akka" %% "akka-stream-alpakka-sns" % "0.11",

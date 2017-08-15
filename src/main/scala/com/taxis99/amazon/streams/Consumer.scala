@@ -80,11 +80,12 @@ object Consumer {
   private def ackOrRetry[A](block: JsValue => Future[A])
                    (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
+      logger.debug(s"Consuming message $value")
       block(value) map {
         case RequeueWithDelay(delay) => RequeueWithDelay(delay)
         case _ => Ack()
       } andThen {
-        case Failure(e) => logger.error(s"Could not consume message $value", e)
+        case Failure(e) => logger.debug(s"Could not consume message $value")
       }
     }
 
@@ -98,10 +99,11 @@ object Consumer {
                      (block: JsValue => Future[A])
                      (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
     Flow[JsValue].mapAsync(LEVEL_OF_PARALLELISM) { value =>
+      logger.debug(s"Consuming message $value")
       block(value) map (_ => Ack()) recover {
         case _: Throwable => RequeueWithDelay(delay.toSeconds.toInt)
       } andThen {
-        case Failure(e) => logger.error(s"Could not consume message $value", e)
+        case Failure(e) => logger.debug(s"Could not consume message $value")
       }
     }
 }
