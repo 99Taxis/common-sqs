@@ -44,4 +44,17 @@ class SqsSpec extends IntegrationSpec {
       succeed
     }
   }
+
+  it should "keep consuming even after an exception" in {
+    val msgEx = TestType("fail", 0)
+    val msg = TestType("1", 1)
+
+    for {
+      _ <- producer.produce(msgEx)
+      _ <- producer.produce(msg)
+    } yield {
+      probe expectMsg (10.seconds, msg)
+      succeed
+    }
+  }
 }

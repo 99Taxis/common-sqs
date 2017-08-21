@@ -1,6 +1,6 @@
 package com.taxis99.amazon.streams
 
-import akka.stream.alpakka.sqs.{Ack, RequeueWithDelay}
+import akka.stream.alpakka.sqs.{Delete, Ignore, ChangeMessageVisibility}
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.services.sqs.model.Message
 import com.taxis99.amazon.serializers.PlayJson
@@ -22,7 +22,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     msg.setBody(strMsg)
 
     Source.single(msg) via Consumer(PlayJson, Duration.Zero)(fn) runWith Sink.head map { result =>
-      result shouldBe ((msg, Ack()))
+      result shouldBe ((msg, Delete()))
     }
   }
 
@@ -56,10 +56,11 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     }
   }
 
-  it should "requeue the message if it future returns an message action" ignore {
-    val requeue = RequeueWithDelay(10000)
+  it should "requeue the message if it future returns an message action" in {
+    val requeue = ChangeMessageVisibility(10000)
     val fn = (_: JsValue) => Future.successful(requeue)
     val msg = new Message()
+    msg.setBody("{}")
 
     Source.single(msg) via Consumer(PlayJson, Duration.Zero, 350)(fn) runWith Sink.head map { result =>
       result shouldBe ((msg, requeue))
@@ -72,7 +73,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     msg.setBody(strMsg)
 
     Source.single(msg) via Consumer(PlayJson, 1.minute)(fn) runWith Sink.head map { result =>
-      result shouldBe ((msg, Ack()))
+      result shouldBe ((msg, Delete()))
     }
   }
 
@@ -82,7 +83,7 @@ class ConsumerSpec extends StreamSpec with PatienceConfiguration {
     msg.setBody(strMsg)
 
     Source.single(msg) via Consumer(PlayJson, 1.minute)(fn) runWith Sink.head map { result =>
-      result shouldBe ((msg, RequeueWithDelay(60)))
+      result shouldBe ((msg, ChangeMessageVisibility(60)))
     }
   }
 }
