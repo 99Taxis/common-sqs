@@ -50,8 +50,9 @@ class SqsSpec extends IntegrationSpec {
     val msg = TestType("1", 1)
 
     for {
-      _ <- producer.produce(msgEx)
-      _ <- producer.produce(msg)
+      _ <- producer.produce(msgEx).flatMap { _ =>
+        producer.produce(msg)
+      }
     } yield {
       probe expectMsg (10.seconds, msg)
       succeed
