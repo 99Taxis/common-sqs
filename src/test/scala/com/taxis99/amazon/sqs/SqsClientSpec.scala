@@ -1,25 +1,27 @@
 package com.taxis99.amazon.sqs
 
+import akka.Done
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
-import com.taxis99.amazon.serializers.PlayJson
+import com.taxis99.amazon.serializers.{ISerializer, PlayJson}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import play.api.libs.json.Json
 import test.StreamSpec
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 
 class SqsClientSpec extends StreamSpec {
+  implicit val serializer: ISerializer = PlayJson
+
   val (queueKey, queueName) = ("test-q", "test-q-DEV")
-  val config = ConfigFactory
-    .empty()
+  val config = ConfigFactory.empty()
     .withValue("sqs", ConfigValueFactory.fromMap(Map(
       queueKey -> queueName
     ).asJava))
 
   def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {
-    aws.createQueueAsync(queueName).get().getQueueUrl
+    aws.createQueue(queueName).getQueueUrl
   }
 
   "#getQueue" should "return an SqsQueue config object eventually" in withInMemoryQueue { implicit aws =>
@@ -43,9 +45,9 @@ class SqsClientSpec extends StreamSpec {
     val probe = TestProbe()
 
     // Produce some message
-    aws.sendMessageAsync(qUrl, jsonMsg.toString()).get()
+    aws.sendMessage(qUrl, jsonMsg.toString())
 
-    sqs.consumer(Future.successful(sqsQ), PlayJson) { value =>
+    sqs.consumer(Future.successful(sqsQ)) { value =>
       Future.successful(probe.ref ! value)
     }
 
@@ -53,20 +55,20 @@ class SqsClientSpec extends StreamSpec {
     succeed
   }
   
-  "#producer" should "produce message to the queue" in withInMemoryQueue { implicit aws =>
+  "#producer" should "return a internal queue that delivers messages to SQS fulfilling a promise when it is done" in withInMemoryQueue { implicit aws =>
     val sqs = new SqsClient(config)
     val qUrl = createQueue("producer-q-TEST")
     val sqsQ = SqsQueue("producer-q", "producer-q-TEST", qUrl)
 
-    val produce = sqs.producer(Future.successful(sqsQ), PlayJson)
+    val produce = sqs.producer(Future.successful(sqsQ))
     val msg = Json.obj("foo" -> "bar")
-    
-    for {
-      _ <- produce(msg)
-      msgs <- Future {
-        aws.receiveMessageAsync(qUrl).get().getMessages.asScala.map(_.getBody)
-      }
-    } yield {
+
+    produce.flatMap { queue =>
+      val done = Promise[Done]
+      queue.offer(msg -> done)
+      done.future
+    } map { _ =>
+      val msgs = aws.receiveMessage(qUrl).getMessages.asScala.map(_.getBody)
       msgs should contain (msg.toString())
     }
   }

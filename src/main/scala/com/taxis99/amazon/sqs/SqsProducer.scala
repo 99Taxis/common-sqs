@@ -1,12 +1,14 @@
 package com.taxis99.amazon.sqs
 
 import akka.Done
-import com.taxis99.amazon.serializers.{ISerializer, PlayJson}
+import akka.stream.QueueOfferResult
 import play.api.libs.json.{Json, Writes}
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 
 trait SqsProducer[T] extends SqsConfig {
+
+  private lazy val producer = sqs.producer(queueConfig)
 
   /**
     * Produces a new message to the queue. The message must be serializable to Json.
@@ -14,6 +16,12 @@ trait SqsProducer[T] extends SqsConfig {
     * @return A future completed when the message was sent
     */
   def produce(message: T)(implicit tjs: Writes[T]): Future[Done] = {
-    sqs.producer(queueConfig, serializer)(Json.toJson(message))
+    val done = Promise[Done]
+    producer flatMap { queue =>
+      queue.offer(Json.toJson(message) -> done) flatMap {
+        case QueueOfferResult.Enqueued => done.future
+        case r: QueueOfferResult => Future.failed(new Exception(s"Could not enqueue $r"))
+      }
+    }
   }
 }

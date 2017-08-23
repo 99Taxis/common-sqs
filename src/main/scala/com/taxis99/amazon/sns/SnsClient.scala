@@ -2,10 +2,11 @@ package com.taxis99.amazon.sns
 
 import javax.inject.{Inject, Singleton}
 
+import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import akka.stream.alpakka.sns.scaladsl.{SnsPublisher => SnsSink}
-import akka.stream.scaladsl.Source
+import akka.stream.alpakka.sns.scaladsl.{SnsPublisher => SnsFlow}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy, Supervision}
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.services.sns.AmazonSNSAsync
 import com.amazonaws.services.sns.model.{CreateTopicRequest, CreateTopicResult}
@@ -71,8 +72,10 @@ class SnsClient @Inject()(config: Config)
     * @param eventualTopicConfig The future with the topic configuration object
     * @return A publish function for the given queue configuration
     */
-  def publisher(eventualTopicConfig: Future[SnsTopic], serializer: ISerializer) = (value: JsValue) => eventualTopicConfig flatMap { t =>
-    logger.debug(s"Publishing message $value with ${serializer.getClass.getSimpleName} serializer at ${t.name}")
-    Source.single(value) via Producer(serializer) runWith SnsSink.sink(t.arn)
-  }
+  def publisher(eventualTopicConfig: Future[SnsTopic])
+               (implicit serializer: ISerializer): Future[SourceQueueWithComplete[(JsValue, Promise[Done])]] =
+    eventualTopicConfig map { t =>
+      val flow = SnsFlow.flow(t.arn)
+      Source.queue[(JsValue, Promise[Done])](0, OverflowStrategy.backpressure) to Producer.sns(flow) run()
+    }
 }

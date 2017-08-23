@@ -15,7 +15,7 @@ class TestConsumer(queueName: String, probe: ActorRef)
 
   def consume(message: TestType): Future[Unit] = Future {
     message.foo match {
-      case "fail" | "error" | "exception" | "ex" => new Exception("Bad things happens to good people")
+      case "fail" | "error" | "exception" | "ex" => throw new Exception("Bad things happens to good people")
       case _ => probe ! message
     }
   }

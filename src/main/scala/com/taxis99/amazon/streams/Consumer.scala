@@ -13,11 +13,10 @@ import play.api.libs.json.JsValue
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Failure
 
 object Consumer {
 
-  protected val LevelOfParallelism = 10
+  protected val LevelOfParallelism = 50
 
   protected val logger: Logger = Logger(LoggerFactory.getLogger(getClass.getName))
 
@@ -26,16 +25,14 @@ object Consumer {
     * @param block The message execution block
     * @return A flow graph stage
     */
-  def apply[A](serializer: ISerializer, delay: Duration, maxRetries: Int = 200)
-              (block: JsValue => Future[A])
-              (implicit ec: ExecutionContext): Flow[Message, (Message, MessageAction), NotUsed] = {
+  def apply[A](delay: Duration, maxRetries: Int = 200)(block: JsValue => Future[A])
+              (implicit ec: ExecutionContext, serializer: ISerializer): Flow[Message, (Message, MessageAction), NotUsed] = {
 
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
       val filter = builder.add(Flow[Message] filterNot maxRetriesReached(maxRetries))
       val bcast = builder.add(Broadcast[Message](2))
-      val decode = builder.add(Serializer.decode(serializer))
       val consume = builder.add(delay match {
         case Duration.Zero | Duration.Inf | Duration.MinusInf | Duration.Undefined =>
           Consumer.ackOrRetry(block)
@@ -46,8 +43,8 @@ object Consumer {
 
       // Max retries not reached
       filter ~> bcast
-      bcast.out(0) ~>                      merge.in0
-      bcast.out(1) ~> decode ~> consume ~> merge.in1
+      bcast.out(0) ~>            merge.in0
+      bcast.out(1) ~> consume ~> merge.in1
 
       FlowShape(filter.in, merge.out)
     })
@@ -70,14 +67,17 @@ object Consumer {
     * @return A flow stage that returns a MessageAction
     */
   private def ackOrRetry[A](block: JsValue => Future[A])
-                   (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] =
-    Flow[JsValue].mapAsync(LevelOfParallelism) { value =>
-      logger.debug(s"Consuming message $value")
-      block(value) map {
+                   (implicit ec: ExecutionContext, serializer: ISerializer): Flow[Message, MessageAction, NotUsed] =
+    Flow[Message].mapAsync(LevelOfParallelism) { message =>
+      logger.debug(s"Consuming message $message")
+
+      Future.fromTry(Serializer.decode(message)) flatMap block map {
         case ChangeMessageVisibility(visibilityTimeout) => ChangeMessageVisibility(visibilityTimeout)
         case _ => Delete()
-      } andThen {
-        case Failure(e) => logger.error(s"Could not consume message $value", e)
+      } recover {
+        case e =>
+          logger.error(s"Could not consume message $message", e)
+          Ignore()
       }
     }
 
@@ -87,15 +87,14 @@ object Consumer {
      * @param block The execution block
      * @return A flow stage that returns a MessageAction
      */
-   private def ackOrRequeue[A](delay: Duration = 5.minutes)
-                      (block: JsValue => Future[A])
-                      (implicit ec: ExecutionContext): Flow[JsValue, MessageAction, NotUsed] = {
+   private def ackOrRequeue[A](delay: Duration = 5.minutes)(block: JsValue => Future[A])
+                      (implicit ec: ExecutionContext, serializer: ISerializer): Flow[Message, MessageAction, NotUsed] = {
      val seconds = delay.toSeconds.toInt
-     Flow[JsValue].mapAsync(LevelOfParallelism) { value =>
-       logger.debug(s"Consuming message $value")
-       block(value) map (_ => Delete()) recover {
+     Flow[Message].mapAsync(LevelOfParallelism) { message =>
+       logger.debug(s"Consuming message $message")
+       Future.fromTry(Serializer.decode(message)) flatMap block map (_ => Delete()) recover {
          case e => {
-           logger.error(s"Could not consume message $value retry in $seconds secs", e)
+           logger.error(s"Could not consume message $message retrying in $seconds secs", e)
            ChangeMessageVisibility(seconds)
          }
        }

@@ -4,10 +4,10 @@ import javax.inject._
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsSink, SqsSource}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy, Supervision}
+import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsFlow, SqsSink, SqsSource}
 import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.{GetQueueUrlRequest, GetQueueUrlResult}
@@ -83,8 +83,8 @@ class SqsClient @Inject()(config: Config)
     * @tparam A The expected consumer class type
     * @return The eventual consumer end event
     */
-  def consumer[A](eventualQueueConfig: Future[SqsQueue], serializer: ISerializer)
-                 (block: JsValue => Future[A]): Future[Done] = eventualQueueConfig flatMap { q =>
+  def consumer[A](eventualQueueConfig: Future[SqsQueue])(block: JsValue => Future[A])
+                 (implicit serializer: ISerializer): Future[Done] = eventualQueueConfig flatMap { q =>
     logger.info(s"Start consuming queue ${q.url} with ${serializer.getClass.getSimpleName} serializer")
     // Get configuration options
     val waitTimeSeconds = config.as[Option[Int]](s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
@@ -96,7 +96,7 @@ class SqsClient @Inject()(config: Config)
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
       attributeNames = Seq(All), messageAttributeNames = Seq(MessageAttributeName("All")))
 
-    SqsSource(q.url, sqsSettings) via Consumer(serializer, Duration.Zero, maxRetries)(block) runWith SqsAckSink(q.url)
+    SqsSource(q.url, sqsSettings) via Consumer(Duration.Zero, maxRetries)(block) runWith SqsAckSink(q.url)
   }
 
   /**
@@ -104,10 +104,10 @@ class SqsClient @Inject()(config: Config)
     * @param eventualQueueConfig The future with the queue configuration object
     * @return A producer function for the given queue configuration
     */
-  def producer(eventualQueueConfig: Future[SqsQueue], serializer: ISerializer): (JsValue) => Future[Done] = (value: JsValue) => {
-    eventualQueueConfig flatMap { q =>
-      logger.debug(s"Producing message $value with ${serializer.getClass.getSimpleName} serializer at ${q.name}")
-      Source.single(value) via Producer(serializer) runWith SqsSink(q.url)
+  def producer(eventualQueueConfig: Future[SqsQueue])
+              (implicit serializer: ISerializer): Future[SourceQueueWithComplete[(JsValue, Promise[Done])]] =
+    eventualQueueConfig map { q =>
+      val flow = SqsFlow(q.url)
+      Source.queue[(JsValue, Promise[Done])](0, OverflowStrategy.backpressure) to Producer.sqs(flow) run()
     }
-  }
 }

@@ -11,7 +11,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "com.taxis99",
       scalaVersion := "2.12.3",
-      version      := "0.3.2"
+      version      := "0.3.3"
     )),
     name := "common-sqs",
     licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html")),

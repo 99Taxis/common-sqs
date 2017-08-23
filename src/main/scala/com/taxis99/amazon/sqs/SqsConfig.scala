@@ -14,7 +14,7 @@ protected[this] trait SqsConfig {
     * Defines the serialization method to produce/consume messages.
     * @return The serialization object
     */
-  def serializer: ISerializer = PlayJson
+  implicit def serializer: ISerializer = PlayJson
 
   /**
     * The queue name in the configuration file

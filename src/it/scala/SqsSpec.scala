@@ -1,11 +1,14 @@
 package com.taxis99.amazon.sqs
 
 import akka.testkit.TestProbe
+import com.amazonaws.handlers.AsyncHandler
+import com.amazonaws.services.sqs.model.{SendMessageRequest, SendMessageResult}
 import com.typesafe.config.ConfigFactory
 import it.IntegrationSpec
 import it.mocks.{TestConsumer, TestProducer, TestType}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 class SqsSpec extends IntegrationSpec {
@@ -30,6 +33,37 @@ class SqsSpec extends IntegrationSpec {
     }
   }
 
+  it should "keep consuming even after a consumer exception" in {
+    val msgEx = TestType("fail", -1)
+    val msg1 = TestType("ok1", 1)
+    val msg2 = TestType("ok2", 2)
+    val msg3 = TestType("ok3", 3)
+
+    producer.produce(msg1)
+      .flatMap(_ => producer.produce(msgEx))
+      .flatMap(_ => producer.produce(msg2))
+      .flatMap(_ => producer.produce(msg3)).map { _ =>
+      probe expectMsgAllOf (msg1, msg2, msg3)
+      succeed
+    }
+  }
+
+  it should "keep consuming even after a decode exception" in {
+    val msgEx = produceRawMessage(queueName, "{bad formated message}")
+    val msg1 = TestType("ok1", 1)
+    val msg2 = TestType("ok2", 2)
+    val msg3 = TestType("ok3", 3)
+
+    msgEx
+      .flatMap(_ => producer.produce(msg1))
+      .flatMap(_ => producer.produce(msg2))
+      .flatMap(_ => producer.produce(msg3))
+      .map { _ =>
+      probe expectMsgAllOf (msg1, msg2, msg3)
+      succeed
+    }
+  }
+
   it should "publish several messages" in {
     val msg1 = TestType("1", 1)
     val msg2 = TestType("2", 2)
@@ -41,20 +75,6 @@ class SqsSpec extends IntegrationSpec {
       _ <- producer.produce(msg3)
     } yield {
       probe expectMsgAllOf (msg1, msg2, msg3)
-      succeed
-    }
-  }
-
-  it should "keep consuming even after an exception" in {
-    val msgEx = TestType("fail", 0)
-    val msg = TestType("1", 1)
-
-    for {
-      _ <- producer.produce(msgEx).flatMap { _ =>
-        producer.produce(msg)
-      }
-    } yield {
-      probe expectMsg (10.seconds, msg)
       succeed
     }
   }

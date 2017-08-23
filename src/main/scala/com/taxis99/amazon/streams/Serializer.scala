@@ -1,12 +1,10 @@
 package com.taxis99.amazon.streams
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
 import com.amazonaws.services.sqs.model.Message
 import com.taxis99.amazon.serializers.ISerializer
-import com.typesafe.scalalogging.Logger
-import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
+
+import scala.util.Try
 
 object Serializer {
 
@@ -21,25 +19,19 @@ object Serializer {
     * Returns a string from a JsValue.
     * @return The byte array string
     */
-  def encode(serializer: ISerializer): Flow[JsValue, String, NotUsed] = Flow[JsValue] map { value =>
-    try {
-      serializer.encode(value)
-    } catch {
+  def encode(message: JsValue)(implicit serializer: ISerializer): Try[String] = Try(serializer.encode(message))
+    .recover {
       case e: Exception =>
-        throw new SerializerEncoderException(s"${serializer.getClass.getSimpleName} could not encode $value with", e)
+        throw new SerializerEncoderException(s"${serializer.getClass.getSimpleName} could not encode $message with", e)
     }
-  }
 
   /**
     * Returns a JsValue from a AWS Message.
     * @return The JsValue
     */
-  def decode(serializer: ISerializer): Flow[Message, JsValue, NotUsed] = Flow[Message] map { message =>
-    try {
-      serializer.decode(message.getBody)
-    } catch {
-      case e: Exception =>
+  def decode(message: Message)(implicit serializer: ISerializer): Try[JsValue] = Try(serializer.decode(message.getBody))
+    .recover {
+       case e: Exception =>
         throw new SerializerEncoderException(s"${serializer.getClass.getSimpleName} could not decode ${message.getBody} with", e)
     }
-  }
 }
