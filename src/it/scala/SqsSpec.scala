@@ -1,22 +1,23 @@
 package com.taxis99.amazon.sqs
 
 import akka.testkit.TestProbe
-import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.services.sqs.model.{SendMessageRequest, SendMessageResult}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import it.IntegrationSpec
 import it.mocks.{TestConsumer, TestProducer, TestType}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 class SqsSpec extends IntegrationSpec {
 
   val queueName = "integration-test-q"
-  val config = ConfigFactory.parseMap(Map[String, String](
-      s"sqs.$queueName" -> queueName
-    ).asJava)
+  val config: Config = ConfigFactory.parseMap(Map[String, String](
+    s"sqs.$queueName" -> queueName,
+    s"sqs.settings.default.waitTimeSeconds" -> "20",
+    s"sqs.settings.default.maxBufferSize" -> "100",
+    s"sqs.settings.default.maxBatchSize" -> "10",
+    s"sqs.settings.default.maxRetries" -> "200"
+  ).asJava)
 
   implicit val sqs = new SqsClient(config)
 

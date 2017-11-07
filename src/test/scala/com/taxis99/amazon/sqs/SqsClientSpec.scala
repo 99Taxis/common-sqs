@@ -4,7 +4,7 @@ import akka.Done
 import akka.testkit.TestProbe
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.taxis99.amazon.serializers.{ISerializer, PlayJson}
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import play.api.libs.json.Json
 import test.StreamSpec
 
@@ -15,10 +15,15 @@ class SqsClientSpec extends StreamSpec {
   implicit val serializer: ISerializer = PlayJson
 
   val (queueKey, queueName) = ("test-q", "test-q-DEV")
-  val config = ConfigFactory.empty()
-    .withValue("sqs", ConfigValueFactory.fromMap(Map(
-      queueKey -> queueName
-    ).asJava))
+  val config: Config = ConfigFactory.parseMap(Map[String, String](
+    s"sqs.$queueKey" -> queueName,
+    s"sqs.settings.default.waitTimeSeconds" -> "20",
+    s"sqs.settings.default.maxBufferSize" -> "100",
+    s"sqs.settings.default.maxBatchSize" -> "10",
+    s"sqs.settings.default.maxRetries" -> "200"
+  ).asJava)
+
+  println(config)
 
   def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {
     aws.createQueue(queueName).getQueueUrl

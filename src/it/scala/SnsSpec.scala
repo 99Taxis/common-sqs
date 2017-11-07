@@ -1,7 +1,7 @@
 import akka.testkit.TestProbe
 import com.taxis99.amazon.sns.SnsClient
 import com.taxis99.amazon.sqs.SqsClient
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import it.IntegrationSpec
 import it.mocks.{TestConsumer, TestPublisher, TestType}
 
@@ -14,10 +14,14 @@ import scala.concurrent.duration._
   */
 class SnsSpec extends IntegrationSpec {
 
-  val config = ConfigFactory.parseMap(Map(
+  val config: Config = ConfigFactory.parseMap(Map[String, String](
     "sns.topic" -> "integration-test-topic",
     "sqs.q1" -> "sns-test-q-1",
-    "sqs.q2" -> "sns-test-q-2"
+    "sqs.q2" -> "sns-test-q-2",
+    s"sqs.settings.default.waitTimeSeconds" -> "20",
+    s"sqs.settings.default.maxBufferSize" -> "100",
+    s"sqs.settings.default.maxBatchSize" -> "10",
+    s"sqs.settings.default.maxRetries" -> "200"
   ).asJava)
 
   implicit val sqs = new SqsClient(config)
