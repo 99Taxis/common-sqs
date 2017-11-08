@@ -4,18 +4,18 @@ import javax.inject._
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy, Supervision}
-import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsFlow, SqsSink, SqsSource}
+import akka.stream.alpakka.sqs.scaladsl.{SqsAckSink, SqsFlow, SqsSource}
 import akka.stream.alpakka.sqs.{All, MessageAttributeName, SqsSourceSettings}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy, Supervision}
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.{GetQueueUrlRequest, GetQueueUrlResult}
 import com.taxis99.amazon.serializers.ISerializer
 import com.taxis99.amazon.streams.{Consumer, Producer}
+import com.taxis99.implicits._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-import net.ceedubs.ficus.Ficus._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
@@ -46,10 +46,10 @@ class SqsClient @Inject()(config: Config)
 
   implicit val materializer = ActorMaterializer(settings)
 
-  private val defaultWaitTimeSeconds = config.as[Option[Int]]("sqs.settings.default.waitTimeSeconds").getOrElse(20)
-  private val defaultMaxBufferSize = config.as[Option[Int]]("sqs.settings.default.maxBufferSize").getOrElse(100)
-  private val defaultMaxBatchSize = config.as[Option[Int]]("sqs.settings.default.maxBatchSize").getOrElse(10)
-  private val defaultMaxRetries = config.as[Option[Int]]("sqs.settings.default.maxRetries").getOrElse(200)
+  private val defaultWaitTimeSeconds = config.getInt("sqs.settings.default.waitTimeSeconds")
+  private val defaultMaxBufferSize = config.getInt("sqs.settings.default.maxBufferSize")
+  private val defaultMaxBatchSize = config.getInt("sqs.settings.default.maxBatchSize")
+  private val defaultMaxRetries = config.getInt("sqs.settings.default.maxRetries")
 
   logger.info("SQS Client ready")
 
@@ -87,10 +87,10 @@ class SqsClient @Inject()(config: Config)
                  (implicit serializer: ISerializer): Future[Done] = eventualQueueConfig flatMap { q =>
     logger.info(s"Start consuming queue ${q.url} with ${serializer.getClass.getSimpleName} serializer")
     // Get configuration options
-    val waitTimeSeconds = config.as[Option[Int]](s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
-    val maxBufferSize = config.as[Option[Int]](s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
-    val maxBatchSize = config.as[Option[Int]](s"sqs.settings.${q.key}.maxBatchSize").getOrElse(defaultMaxBatchSize)
-    val maxRetries = config.as[Option[Int]](s"sqs.settings.${q.key}.maxRetries").getOrElse(defaultMaxRetries)
+    val waitTimeSeconds = config.getOptionalInt(s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
+    val maxBufferSize = config.getOptionalInt(s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
+    val maxBatchSize = config.getOptionalInt(s"sqs.settings.${q.key}.maxBatchSize").getOrElse(defaultMaxBatchSize)
+    val maxRetries = config.getOptionalInt(s"sqs.settings.${q.key}.maxRetries").getOrElse(defaultMaxRetries)
 
     // Configure source to send all attributes from the message
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
@@ -108,6 +108,7 @@ class SqsClient @Inject()(config: Config)
               (implicit serializer: ISerializer): Future[SourceQueueWithComplete[(JsValue, Promise[Done])]] =
     eventualQueueConfig map { q =>
       val flow = SqsFlow(q.url)
-      Source.queue[(JsValue, Promise[Done])](0, OverflowStrategy.backpressure) to Producer.sqs(flow) run()
+      logger.info(s"Start producer for ${q.url}")
+      Source.queue[(JsValue, Promise[Done])](DISABLE_BUFFER, OverflowStrategy.backpressure).async to Producer.sqs(flow) run()
     }
 }

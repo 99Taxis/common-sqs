@@ -12,6 +12,7 @@ import com.amazonaws.services.sns.AmazonSNSAsync
 import com.amazonaws.services.sns.model.{CreateTopicRequest, CreateTopicResult}
 import com.taxis99.amazon.serializers.ISerializer
 import com.taxis99.amazon.streams.Producer
+import com.taxis99.implicits.DISABLE_BUFFER
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -76,6 +77,7 @@ class SnsClient @Inject()(config: Config)
                (implicit serializer: ISerializer): Future[SourceQueueWithComplete[(JsValue, Promise[Done])]] =
     eventualTopicConfig map { t =>
       val flow = SnsFlow.flow(t.arn)
-      Source.queue[(JsValue, Promise[Done])](0, OverflowStrategy.backpressure) to Producer.sns(flow) run()
+      logger.info(s"Start producer for ${t.arn}")
+      Source.queue[(JsValue, Promise[Done])](DISABLE_BUFFER, OverflowStrategy.backpressure).async to Producer.sns(flow) run()
     }
 }
