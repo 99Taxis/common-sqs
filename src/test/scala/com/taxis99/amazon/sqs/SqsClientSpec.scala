@@ -23,8 +23,6 @@ class SqsClientSpec extends StreamSpec {
     s"sqs.settings.default.maxRetries" -> "200"
   ).asJava)
 
-  println(config)
-
   def createQueue(queueName: String)(implicit aws: AmazonSQSAsync): String = {
     aws.createQueue(queueName).getQueueUrl
   }
