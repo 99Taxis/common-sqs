@@ -13,14 +13,14 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.{GetQueueUrlRequest, GetQueueUrlResult}
 import com.taxis99.amazon.serializers.ISerializer
 import com.taxis99.amazon.streams.{Consumer, Producer}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.taxis99.implicits._
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsValue
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.Try
 
 /**
   * The SQS client provides an abstraction to interact with Amazon SQS queues through Akka Stream. The client is
@@ -87,10 +87,10 @@ class SqsClient @Inject()(config: Config)
                  (implicit serializer: ISerializer): Future[Done] = eventualQueueConfig flatMap { q =>
     logger.info(s"Start consuming queue ${q.url} with ${serializer.getClass.getSimpleName} serializer")
     // Get configuration options
-    val waitTimeSeconds = Try(config.getInt(s"sqs.settings.${q.key}.waitTimeSeconds")).toOption.getOrElse(defaultWaitTimeSeconds)
-    val maxBufferSize = Try(config.getInt(s"sqs.settings.${q.key}.maxBufferSize")).toOption.getOrElse(defaultMaxBufferSize)
-    val maxBatchSize = Try(config.getInt(s"sqs.settings.${q.key}.maxBatchSize")).toOption.getOrElse(defaultMaxBatchSize)
-    val maxRetries = Try(config.getInt(s"sqs.settings.${q.key}.maxRetries")).toOption.getOrElse(defaultMaxRetries)
+    val waitTimeSeconds = config.getOptionalInt(s"sqs.settings.${q.key}.waitTimeSeconds").getOrElse(defaultWaitTimeSeconds)
+    val maxBufferSize = config.getOptionalInt(s"sqs.settings.${q.key}.maxBufferSize").getOrElse(defaultMaxBufferSize)
+    val maxBatchSize = config.getOptionalInt(s"sqs.settings.${q.key}.maxBatchSize").getOrElse(defaultMaxBatchSize)
+    val maxRetries = config.getOptionalInt(s"sqs.settings.${q.key}.maxRetries").getOrElse(defaultMaxRetries)
 
     // Configure source to send all attributes from the message
     val sqsSettings = new SqsSourceSettings(waitTimeSeconds, maxBufferSize, maxBatchSize,
@@ -109,6 +109,6 @@ class SqsClient @Inject()(config: Config)
     eventualQueueConfig map { q =>
       val flow = SqsFlow(q.url)
       logger.info(s"Start producer for ${q.url}")
-      Source.queue[(JsValue, Promise[Done])](0, OverflowStrategy.backpressure).async to Producer.sqs(flow) run()
+      Source.queue[(JsValue, Promise[Done])](DISABLE_BUFFER, OverflowStrategy.backpressure).async to Producer.sqs(flow) run()
     }
 }
